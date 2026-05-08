@@ -18,10 +18,27 @@
         <span>Enterprise Agent Hub</span>
       </a>
       <div class="topbar-actions">
-        <a href="#agent-tabs" class="ghost-link">浏览板块</a>
-        <button class="icon-button" id="themeToggle" type="button" aria-label="切换显示模式" title="切换显示模式">
-          <span aria-hidden="true">◐</span>
-        </button>
+        <div class="discovery-controls" aria-label="Agent 搜索与筛选">
+          <label class="search-box" for="agentSearch">
+            <span aria-hidden="true">⌕</span>
+            <input id="agentSearch" type="search" placeholder="跨全部板块搜索 Agent / 场景 / 效果">
+          </label>
+          <div class="filter-row">
+            <label class="filter-field" for="domainFilter">
+              <span>板块</span>
+              <select id="domainFilter"></select>
+            </label>
+            <label class="filter-field" for="systemFilter">
+              <span>系统</span>
+              <select id="systemFilter"></select>
+            </label>
+            <label class="filter-field" for="valueFilter">
+              <span>价值</span>
+              <select id="valueFilter"></select>
+            </label>
+            <button class="clear-filters" id="clearFilters" type="button">清空</button>
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -41,27 +58,6 @@
           <div class="panel-heading">
             <p class="panel-kicker" id="panelKicker"></p>
             <h3 id="panelTitle"></h3>
-          </div>
-          <div class="discovery-controls" aria-label="Agent 搜索与筛选">
-            <label class="search-box" for="agentSearch">
-              <span aria-hidden="true">⌕</span>
-              <input id="agentSearch" type="search" placeholder="跨全部板块搜索 Agent / 场景 / 效果">
-            </label>
-            <div class="filter-row">
-              <label class="filter-field" for="domainFilter">
-                <span>板块</span>
-                <select id="domainFilter"></select>
-              </label>
-              <label class="filter-field" for="systemFilter">
-                <span>系统</span>
-                <select id="systemFilter"></select>
-              </label>
-              <label class="filter-field" for="valueFilter">
-                <span>价值</span>
-                <select id="valueFilter"></select>
-              </label>
-              <button class="clear-filters" id="clearFilters" type="button">清空</button>
-            </div>
           </div>
         </div>
         <p class="panel-description" id="panelDescription"></p>

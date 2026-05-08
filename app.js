@@ -220,7 +220,6 @@ const valueFilter = document.getElementById("valueFilter");
 const clearFilters = document.getElementById("clearFilters");
 const modal = document.getElementById("agentModal");
 const modalClose = document.getElementById("modalClose");
-const themeToggle = document.getElementById("themeToggle");
 
 function populateFilters() {
   const systems = Array.from(new Set(categories.flatMap((category) => category.agents.flatMap((item) => item.systems)))).sort((left, right) => left.localeCompare(right, "zh-CN"));
@@ -353,7 +352,7 @@ function detailTemplate(item, category) {
   return `
     <div class="detail-hero">
       <p class="modal-domain">${category.title}</p>
-      <h2>${item.name}</h2>
+      <h2 id="modalTitle">${item.name}</h2>
       <p>${item.summary}</p>
       <div class="modal-tags">
         <span>AI Agent</span>
@@ -491,10 +490,6 @@ clearFilters.addEventListener("click", () => {
 modalClose.addEventListener("click", () => modal.close());
 modal.addEventListener("click", (event) => {
   if (event.target === modal) modal.close();
-});
-
-themeToggle.addEventListener("click", () => {
-  document.documentElement.classList.toggle("light");
 });
 
 populateFilters();
