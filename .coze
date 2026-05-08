@@ -6,8 +6,8 @@ appliedPatches = [ ]
 
 [dev]
 build = [ ]
-run = [ "python", "-m", "http.server", "5000", "--bind", "0.0.0.0" ]
+run = [ "python", "server.py" ]
 
 [deploy]
 build = [ ]
-run = [ "python", "-m", "http.server", "5000", "--bind", "0.0.0.0" ]
+run = [ "python", "server.py" ]
