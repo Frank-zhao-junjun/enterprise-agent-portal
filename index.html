@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>企业核心业务 Agent 图谱</title>
+  <meta name="description" content="面向企业财务、销售、制造交付、采购、主数据、人力、法务、经营分析、客服售后的 AI Agent 场景门户。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="site-header">
+    <nav class="topbar" aria-label="页面导航">
+      <a class="brand" href="#top" aria-label="企业核心业务 Agent 图谱">
+        <span class="brand-mark">AI</span>
+        <span>Enterprise Agent Hub</span>
+      </a>
+      <div class="topbar-actions">
+        <a href="#agent-tabs" class="ghost-link">浏览板块</a>
+        <button class="icon-button" id="themeToggle" type="button" aria-label="切换显示模式" title="切换显示模式">
+          <span aria-hidden="true">◐</span>
+        </button>
+      </div>
+    </nav>
+
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <h1>企业核心业务 Agent 图谱</h1>
+        <p class="hero-lede">将财务、销售营销、制造交付、供应链、采购、主数据、人力、法务、经营分析与客服售后纳入同一张智能体地图，帮助管理层快速理解每个 Agent 的定位、价值与落地场景。</p>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <section class="workspace" id="agent-tabs">
+      <div class="tab-shell">
+        <div class="tabs" id="tabs" role="tablist" aria-label="企业板块"></div>
+        <div class="panel-toolbar">
+          <div>
+            <p class="panel-kicker" id="panelKicker"></p>
+            <h3 id="panelTitle"></h3>
+          </div>
+          <label class="search-box" for="agentSearch">
+            <span aria-hidden="true">⌕</span>
+            <input id="agentSearch" type="search" placeholder="搜索 Agent / 场景 / 效果">
+          </label>
+        </div>
+        <p class="panel-description" id="panelDescription"></p>
+        <div class="agent-grid" id="agentGrid"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog class="agent-modal" id="agentModal" aria-labelledby="modalTitle">
+    <div class="modal-shell">
+      <button class="modal-close" id="modalClose" type="button" aria-label="关闭">×</button>
+      <div class="modal-visual" id="modalVisual"></div>
+      <div class="modal-content">
+        <p class="modal-domain" id="modalDomain"></p>
+        <h2 id="modalTitle"></h2>
+        <p id="modalSummary"></p>
+        <div class="modal-tags" id="modalTags"></div>
+        <div class="detail-grid">
+          <section>
+            <h3>核心功能</h3>
+            <p id="modalFunction"></p>
+          </section>
+          <section>
+            <h3>场景示意</h3>
+            <p id="modalScenario"></p>
+          </section>
+          <section>
+            <h3>业务效果</h3>
+            <p id="modalImpact"></p>
+          </section>
+          <section>
+            <h3>系统连接</h3>
+            <p id="modalSystems"></p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
