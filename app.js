@@ -214,19 +214,8 @@ const panelKicker = document.getElementById("panelKicker");
 const panelTitle = document.getElementById("panelTitle");
 const panelDescription = document.getElementById("panelDescription");
 const agentSearch = document.getElementById("agentSearch");
-const domainFilter = document.getElementById("domainFilter");
-const systemFilter = document.getElementById("systemFilter");
-const valueFilter = document.getElementById("valueFilter");
-const clearFilters = document.getElementById("clearFilters");
 const modal = document.getElementById("agentModal");
 const modalClose = document.getElementById("modalClose");
-
-function populateFilters() {
-  const systems = Array.from(new Set(categories.flatMap((category) => category.agents.flatMap((item) => item.systems)))).sort((left, right) => left.localeCompare(right, "zh-CN"));
-  domainFilter.innerHTML = `<option value="all">全部板块</option>${categories.map((category) => `<option value="${category.id}">${category.tab}</option>`).join("")}`;
-  systemFilter.innerHTML = `<option value="all">全部系统</option>${systems.map((system) => `<option value="${system}">${system}</option>`).join("")}`;
-  valueFilter.innerHTML = `<option value="all">全部价值</option>${valueFilters.map((filter) => `<option value="${filter.id}">${filter.label}</option>`).join("")}`;
-}
 
 function renderTabs() {
   tabs.innerHTML = categories.map((category) => `
@@ -458,40 +447,10 @@ agentSearch.addEventListener("input", (event) => {
   renderPanel();
 });
 
-domainFilter.addEventListener("change", (event) => {
-  state.domain = event.target.value;
-  if (state.domain !== "all") state.categoryId = state.domain;
-  renderTabs();
-  renderPanel();
-});
-
-systemFilter.addEventListener("change", (event) => {
-  state.system = event.target.value;
-  renderPanel();
-});
-
-valueFilter.addEventListener("change", (event) => {
-  state.value = event.target.value;
-  renderPanel();
-});
-
-clearFilters.addEventListener("click", () => {
-  state.query = "";
-  state.domain = "all";
-  state.system = "all";
-  state.value = "all";
-  agentSearch.value = "";
-  domainFilter.value = "all";
-  systemFilter.value = "all";
-  valueFilter.value = "all";
-  renderPanel();
-});
-
 modalClose.addEventListener("click", () => modal.close());
 modal.addEventListener("click", (event) => {
   if (event.target === modal) modal.close();
 });
 
-populateFilters();
 renderTabs();
 renderPanel();

@@ -83,7 +83,7 @@ button, input { font: inherit; }
   align-items: center;
   justify-content: flex-end;
   flex: 1;
-  min-width: min(720px, 100%);
+  min-width: min(420px, 100%);
 }
 .ghost-link, .icon-button {
   border: 1px solid var(--line);
@@ -233,16 +233,6 @@ h1 {
   font: inherit;
 }
 .filter-field option { color: #111927; }
-.clear-filters {
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  padding: 0 14px;
-  cursor: pointer;
-  font-weight: 800;
-}
 .panel-description { margin: 0; padding: 0 26px 20px; color: var(--muted); line-height: 1.7; }
 .agent-grid {
   display: grid;
@@ -425,7 +415,6 @@ h1 {
   .hero-lede { font-size: 16px; }
   .workspace { width: min(100% - 24px, 1180px); }
   .panel-toolbar { align-items: stretch; flex-direction: column; padding: 20px 16px 10px; }
-  .filter-row { grid-template-columns: 1fr; }
   .search-box { min-width: 0; }
   .panel-description { padding: 0 16px 18px; }
   .agent-grid, .detail-grid { grid-template-columns: 1fr; }
