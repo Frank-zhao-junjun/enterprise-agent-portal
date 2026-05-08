@@ -430,9 +430,6 @@ tabs.addEventListener("click", (event) => {
   state.system = "all";
   state.value = "all";
   agentSearch.value = "";
-  domainFilter.value = "all";
-  systemFilter.value = "all";
-  valueFilter.value = "all";
   renderTabs();
   renderPanel();
 });
