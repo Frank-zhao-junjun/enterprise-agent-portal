@@ -164,6 +164,170 @@ const categories = [
   }
 ];
 
+const detailedAgentProfiles = {
+  "财务智能月结 Agent": {
+    overview: "面向集团财务月结的任务编排与差异解释场景，把库存关账、成本核算、总账过账、合并抵消和报表出具串成一条可追踪链路。它不是简单提醒工具，而是在每个结账节点检查前置条件、解释异常来源并推动责任人闭环。",
+    painPoints: [
+      { title: "月结状态分散", text: "库存、成本、总账、合并报表分别在不同系统推进，财务经理需要靠群消息和表格反复确认进度。" },
+      { title: "差异解释滞后", text: "科目余额、成本分摊、内部交易抵消出现异常时，往往到报表阶段才集中暴露。" },
+      { title: "催办不可追踪", text: "任务是否逾期、卡在哪个部门、是否已经升级处理，缺少统一的责任视图。" }
+    ],
+    triggers: [
+      "月结日历进入指定结账窗口，例如 T+1 日 18:00 自动启动预检查。",
+      "库存关账、成本计算、总账过账或合并抵消任务超过计划完成时间。",
+      "跨系统余额、成本中心、内部往来或抵消分录差异超过预设阈值。",
+      "管理层请求查看月结进度、阻塞原因或预计报表出具时间。"
+    ],
+    workflow: [
+      "读取月结日历和任务清单，按法人、事业部、流程节点生成结账作战图。",
+      "检查库存关账、成本核算、应收应付、总账过账、合并报表等前置条件。",
+      "对异常项目进行归因，标记责任系统、责任组织、影响报表和建议处理动作。",
+      "向责任人推送催办任务，并根据逾期时间和影响等级自动升级。",
+      "生成管理层月结看板，展示完成率、阻塞项、预计完成时间和高风险差异。",
+      "结账完成后沉淀复盘报告，保留异常原因、处理人、处理时长和下月预防建议。"
+    ],
+    inputs: ["月结日历", "结账任务清单", "总账余额", "未过账凭证", "库存关账状态", "成本计算批次", "合并抵消规则"],
+    outputs: ["月结进度看板", "阻塞任务清单", "差异归因说明", "责任人催办任务", "报表出具风险提示", "月结复盘报告"],
+    humanControls: ["关闭账期", "确认调整凭证", "批准差异豁免", "发布正式管理报表"],
+    kpis: ["月结周期缩短 20%-40%", "逾期结账任务占比下降", "高风险差异提前发现率提升", "财务催办沟通次数减少"],
+    pilot: "建议先选择集团总部加一个事业部，覆盖库存关账、成本核算、总账过账、合并报表四条链路，连续跑 2 个结账周期验证效果。"
+  },
+  "超期应收闭环催办 Agent": {
+    overview: "面向销售、财务和客户经理共同参与的应收催收场景，把账龄、合同条款、客户信用、回款承诺和历史催办记录整合成分级催办策略。它负责识别风险、分派动作、跟踪承诺兑现，并把长期未闭环事项升级到管理层。",
+    painPoints: [
+      { title: "责任边界不清", text: "同一笔逾期应收可能涉及销售、财务、法务和客户经理，人工催办容易互相等待。" },
+      { title: "客户承诺难跟踪", text: "客户口头承诺或邮件承诺回款后，缺少自动提醒和兑现校验。" },
+      { title: "风险分级不足", text: "金额大、账龄长、信用下调和外部司法风险常被放在同一张表里处理，优先级不清。" }
+    ],
+    triggers: [
+      "应收超过合同账期 7 天、15 天、30 天等分级阈值。",
+      "客户连续两次未按承诺日期回款，或回款金额低于承诺金额。",
+      "客户信用等级下调、授信额度超限、司法舆情或工商风险上升。",
+      "重点客户逾期金额超过区域或事业部预警线。"
+    ],
+    workflow: [
+      "汇总应收余额、账龄、合同账期、开票状态、回款承诺和历史催办记录。",
+      "按逾期天数、金额、客户信用、订单履约和争议状态计算风险等级。",
+      "生成销售跟进、财务提醒、客户经理拜访、法务预警等分级动作。",
+      "把催办任务推送给责任人，并跟踪是否完成、客户是否响应、承诺是否兑现。",
+      "对长期未处理或高金额事项自动升级，并输出管理层逾期应收看板。"
+    ],
+    inputs: ["应收明细", "合同账期", "开票记录", "回款流水", "客户信用", "催办记录", "客户承诺"],
+    outputs: ["逾期客户清单", "分级催收策略", "责任人任务", "客户承诺跟踪", "风险升级记录", "现金回收预测"],
+    humanControls: ["冻结发货", "调整客户账期", "发送正式律师函", "确认坏账计提或核销"],
+    kpis: ["逾期应收金额下降", "催办任务响应时长缩短", "承诺回款兑现率提升", "高风险客户提前识别率提升"],
+    pilot: "建议先覆盖 Top 50 高余额客户和账龄超过 30 天的应收，按区域销售组织试点 4 周，再扩展到全部客户池。"
+  },
+  "AI 视觉质量检测 Agent": {
+    overview: "面向产线首检、巡检和关键工位在线检测场景，通过工业相机、视觉模型和质量规则识别外观缺陷、尺寸异常、装配遗漏和误操作，并联动 MES、质量系统完成拦截、复检和缺陷闭环。",
+    painPoints: [
+      { title: "人工检测稳定性不足", text: "高节拍产线中，人工目检容易受疲劳、经验差异和班次切换影响。" },
+      { title: "缺陷追溯链条断裂", text: "发现缺陷后难以快速关联工单、批次、设备、物料和操作人员。" },
+      { title: "新缺陷扩展慢", text: "新品或小批量缺陷样本不足，传统规则或模型更新周期长。" }
+    ],
+    triggers: [
+      "工单开线、首件确认、关键工序完工或抽检计划到达。",
+      "视觉模型识别到缺陷、装配遗漏、尺寸偏差或置信度低于阈值。",
+      "同一工位、批次或设备连续出现同类缺陷。",
+      "质检员复判结果与模型判断存在明显分歧，需要进入样本回流。"
+    ],
+    workflow: [
+      "采集工位图像、产品型号、工单批次和质量判定规则。",
+      "调用视觉模型识别缺陷类型、位置、尺寸和置信度，并与标准样本对比。",
+      "对高置信度缺陷自动拦截，对低置信度样本推送质检员复判。",
+      "将缺陷结果回写 MES 和质量系统，关联批次、设备、工装和操作记录。",
+      "统计缺陷趋势，提示可能的设备、物料、工艺或人员原因。",
+      "把复判样本沉淀为训练集，支持小样本缺陷快速扩展。"
+    ],
+    inputs: ["工业相机图片", "产品型号", "工单批次", "缺陷样本库", "检验标准", "MES 工序记录", "质量判定规则"],
+    outputs: ["缺陷类型标注", "缺陷位置截图", "拦截或复检指令", "批次质量记录", "缺陷趋势分析", "样本回流清单"],
+    humanControls: ["最终放行", "报废判定", "复检结论", "模型版本发布", "质量标准变更"],
+    kpis: ["漏检率下降", "过检率可控", "首检时间缩短", "关键岗位检测覆盖率提升", "缺陷闭环时长缩短"],
+    pilot: "建议选择一个缺陷边界清晰、相机条件稳定的关键工位，先覆盖 3-5 类高频缺陷，验证 2 周后再扩展到更多型号和工位。"
+  },
+  "物料计划智能体": {
+    overview: "面向需求变化、齐套分析和采购执行联动场景，把 MRP、BOM、库存、在途、替代料、供应商配额和交期约束整合起来，给计划员提供缺料预警、替代建议和采购执行方案。",
+    painPoints: [
+      { title: "计划变化传导慢", text: "销售预测、生产计划和客户订单变化后，物料缺口需要计划员手工反复测算。" },
+      { title: "替代料判断依赖经验", text: "替代关系、质量认证、成本影响和库存覆盖分散在不同系统或表格中。" },
+      { title: "采购执行脱节", text: "计划建议没有及时转成请购、催交或供应商调整动作，缺料风险暴露过晚。" }
+    ],
+    triggers: [
+      "销售预测、主生产计划或客户订单发生调整。",
+      "MRP 运算后出现关键物料缺口、齐套率下降或交期冲突。",
+      "供应商交付延期、配额不足、最小起订量或采购周期发生变化。",
+      "库存低于安全库存，或呆滞库存超过预警阈值。"
+    ],
+    workflow: [
+      "读取需求、BOM、库存、在途、采购周期和供应商配额，计算净需求。",
+      "按订单优先级、交期、替代关系和库存覆盖识别缺料风险。",
+      "评估替代料可用性，比较质量认证、成本、库存和交付影响。",
+      "生成请购、调拨、替代、催交或供应商配额调整建议。",
+      "联动采购执行，跟踪建议是否转成 PR、PO、催交通知或计划调整。",
+      "沉淀缺料原因，为后续安全库存、配额和提前期优化提供依据。"
+    ],
+    inputs: ["销售预测", "主生产计划", "BOM", "MRP 结果", "库存", "在途采购", "替代料关系", "供应商配额"],
+    outputs: ["缺料风险清单", "齐套分析报告", "替代料建议", "请购建议", "催交通知", "供应商配额调整建议"],
+    humanControls: ["替代料启用", "供应商切换", "请购释放", "安全库存调整", "生产计划改期"],
+    kpis: ["关键缺料提前发现率提升", "计划员测算时间减少", "齐套率提升", "呆滞库存下降", "采购响应时长缩短"],
+    pilot: "建议先选择一个产品族和 20-50 个关键物料，覆盖需求变化、缺料识别、替代建议和采购联动四个动作，运行一个计划周期。"
+  },
+  "询比价自动化 Agent": {
+    overview: "面向采购询价、报价解析、价格对比和定标建议场景，自动生成询价单、收集供应商报价、统一折算条款，并从总拥有成本、历史价格和交付风险角度给采购员提供谈判依据。",
+    painPoints: [
+      { title: "报价格式不统一", text: "供应商通过邮件、表格、PDF 或门户提交报价，人工整理耗时且容易漏字段。" },
+      { title: "价格对比只看单价", text: "运费、税率、币种、账期、MOQ、交期和质保条款没有统一折算。" },
+      { title: "异常报价发现慢", text: "围标、异常低价、历史偏离和供应风险需要采购员凭经验判断。" }
+    ],
+    triggers: [
+      "采购申请达到询比价门槛，或新品类、新供应商需要比选。",
+      "供应商提交报价邮件、报价单或门户报价记录。",
+      "报价单价、总价、账期、交期或 MOQ 明显偏离历史区间。",
+      "定标前需要生成谈判建议、异常说明和审批摘要。"
+    ],
+    workflow: [
+      "根据采购申请、规格书和候选供应商生成询价包。",
+      "解析邮件、Excel、PDF 和门户报价，抽取价格、币种、税率、交期、MOQ 和付款条款。",
+      "统一折算到可比口径，计算含税价、到厂价、总拥有成本和历史偏离。",
+      "识别异常报价、缺失条款、疑似陪标和供应商履约风险。",
+      "生成供应商排序、谈判建议、推荐定标方案和审批摘要。",
+      "把定标结果、价格依据和异常处理记录回写 SRM 或招采系统。"
+    ],
+    inputs: ["采购申请", "规格书", "供应商库", "历史采购价", "报价邮件", "报价附件", "合同条款", "供应商绩效"],
+    outputs: ["询价单", "报价解析表", "TCO 对比表", "异常报价提示", "谈判建议", "定标推荐", "审批摘要"],
+    humanControls: ["供应商邀请名单", "正式发标", "定标审批", "价格锁定", "合同签署"],
+    kpis: ["比价周期缩短", "有效报价覆盖率提升", "采购节省率提升", "异常报价识别率提升", "人工录入错误减少"],
+    pilot: "建议先选择一个标准化程度高、供应商数量稳定的品类，接入 SRM 和邮件报价，连续处理 20 单以上询比价任务。"
+  },
+  "AI合同助手": {
+    overview: "面向销售、采购和业务部门的合同初审场景，自动识别合同主体、金额、期限、付款、交付、违约、保密和责任限制等条款，并与公司模板、条款库和审批规则比对，输出风险标注和修改建议。",
+    painPoints: [
+      { title: "非法务初审能力不一致", text: "业务人员对合同关键风险识别不稳定，常把低质量合同直接提交法务。" },
+      { title: "模板偏离难发现", text: "客户或供应商修改了责任、付款、违约、保密等条款后，人工逐字比对效率低。" },
+      { title: "版本流转不可控", text: "多轮 Word、PDF 和邮件附件来回修改，容易遗漏历史变更和审批意见。" }
+    ],
+    triggers: [
+      "业务人员上传销售合同、采购合同、补充协议或框架协议。",
+      "合同金额、付款条件、责任限制或交付条款触发高风险审批规则。",
+      "对方版本与公司标准模板存在关键条款偏离。",
+      "合同进入签署前，需要生成法务摘要和审批说明。"
+    ],
+    workflow: [
+      "解析 Word、PDF 或扫描件，抽取主体、金额、期限、付款、交付和争议解决等关键字段。",
+      "与公司模板和条款库比对，识别缺失、弱化、冲突或超权限条款。",
+      "按风险等级标注付款、违约、保密、知识产权、责任限制和终止条款。",
+      "生成修改建议、替代条款、风险解释和需要业务确认的问题清单。",
+      "对多版本合同进行差异比对，保留每轮变更和审批意见。",
+      "输出给法务和审批人的合同摘要，说明高风险点、建议处理和人工确认项。"
+    ],
+    inputs: ["合同文件", "公司合同模板", "标准条款库", "审批规则", "客户或供应商信息", "交易金额", "历史版本"],
+    outputs: ["风险标注", "条款修改建议", "缺失条款清单", "版本差异报告", "法务审核摘要", "业务确认问题清单"],
+    humanControls: ["正式法律意见", "重大条款让步", "合同最终签署", "外部律师送审", "争议处理方案"],
+    kpis: ["合同初审周期缩短", "模板符合率提升", "高风险条款漏检率下降", "法务重复审核工作量减少", "业务退回次数减少"],
+    pilot: "建议先覆盖标准销售合同和采购合同两个模板，限制在中低金额合同初审，收集 50 份合同的风险命中率和法务复核反馈。"
+  }
+};
+
 const categoryOrder = [
   "finance",
   "sales",
@@ -179,7 +343,13 @@ const categoryOrder = [
 
 categories.sort((left, right) => categoryOrder.indexOf(left.id) - categoryOrder.indexOf(right.id));
 
-function agent(name, summary, scenario, impact, systems, tone) {
+categories.forEach((category) => {
+  category.agents.forEach((agentItem) => {
+    agentItem.details = detailedAgentProfiles[agentItem.name] || agentItem.details || null;
+  });
+});
+
+function agent(name, summary, scenario, impact, systems, tone, details = null) {
   return {
     name,
     summary,
@@ -187,6 +357,7 @@ function agent(name, summary, scenario, impact, systems, tone) {
     impact,
     systems,
     tone,
+    details,
     function: summary,
     tags: systems.slice(0, 3)
   };
@@ -244,7 +415,7 @@ function renderPanel() {
 
 function filteredAgents(query) {
   return categories.flatMap((category) => category.agents.map((item, originalIndex) => ({ item, category, originalIndex }))).filter(({ item, category }) => {
-    const haystack = [category.tab, category.title, item.name, item.summary, item.scenario, item.impact, item.systems.join(" ")].join(" ").toLowerCase();
+    const haystack = [category.tab, category.title, item.name, item.summary, item.scenario, item.impact, item.systems.join(" "), searchableDetails(item.details)].join(" ").toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
     return matchesQuery;
   });
@@ -331,6 +502,7 @@ function openAgent(key) {
 function detailTemplate(item, category) {
   const relatedAgents = category.agents.filter((agentItem) => agentItem !== item).slice(0, 3);
   const valueLabel = valueFilters.find((filter) => filter.terms.some((term) => [item.summary, item.scenario, item.impact].join(" ").includes(term)))?.label || "效率提升";
+  const detailContent = item.details ? detailedProfileTemplate(item, category, valueLabel) : standardProfileTemplate(item, category, valueLabel);
   return `
     <div class="detail-hero">
       <p class="modal-domain">${category.title}</p>
@@ -344,6 +516,19 @@ function detailTemplate(item, category) {
       </div>
     </div>
 
+    ${detailContent}
+
+    <section class="detail-section related-section">
+      <h3>Related AI Offerings</h3>
+      <div class="related-list">
+        ${relatedAgents.map((agentItem) => `<article><strong>${agentItem.name}</strong><p>${agentItem.summary}</p></article>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function standardProfileTemplate(item, category, valueLabel) {
+  return `
     <nav class="detail-nav" aria-label="详情分区">
       <a href="#overview">Overview</a>
       <a href="#benefits">Benefits</a>
@@ -404,14 +589,95 @@ function detailTemplate(item, category) {
         <span>审计日志</span>
       </div>
     </section>
+  `;
+}
 
-    <section class="detail-section related-section">
-      <h3>Related AI Offerings</h3>
-      <div class="related-list">
-        ${relatedAgents.map((agentItem) => `<article><strong>${agentItem.name}</strong><p>${agentItem.summary}</p></article>`).join("")}
+function detailedProfileTemplate(item, category, valueLabel) {
+  const details = item.details;
+  return `
+    <nav class="detail-nav" aria-label="详情分区">
+      <a href="#pain-points">业务痛点</a>
+      <a href="#triggers">触发条件</a>
+      <a href="#workflow">工作流</a>
+      <a href="#data-assets">输入输出</a>
+      <a href="#governance">人工把关</a>
+      <a href="#success-metrics">指标与试点</a>
+    </nav>
+
+    <section class="detail-section" id="pain-points">
+      <h3>业务痛点与适用场景</h3>
+      <p>${details.overview}</p>
+      <div class="detail-list detailed-list">
+        ${richList(details.painPoints)}
+      </div>
+    </section>
+
+    <section class="detail-section" id="triggers">
+      <h3>什么时候触发</h3>
+      <ul class="signal-list">
+        ${details.triggers.map((trigger) => `<li>${trigger}</li>`).join("")}
+      </ul>
+    </section>
+
+    <section class="detail-section" id="workflow">
+      <h3>Agent 如何工作</h3>
+      <ol class="workflow-list">
+        ${details.workflow.map((step) => `<li>${step}</li>`).join("")}
+      </ol>
+    </section>
+
+    <section class="detail-section" id="data-assets">
+      <h3>输入数据与输出结果</h3>
+      <div class="detail-split">
+        <article>
+          <h4>需要接入的数据</h4>
+          <div class="asset-list">${details.inputs.map((input) => `<span>${input}</span>`).join("")}</div>
+        </article>
+        <article>
+          <h4>交付给业务的结果</h4>
+          <div class="asset-list">${details.outputs.map((output) => `<span>${output}</span>`).join("")}</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="detail-section" id="governance">
+      <h3>人工把关与安全边界</h3>
+      <p>Agent 负责识别、解释、建议和催办，以下动作保留人工确认，避免自动化越权。</p>
+      <ul class="signal-list control-list">
+        ${details.humanControls.map((control) => `<li>${control}</li>`).join("")}
+      </ul>
+    </section>
+
+    <section class="detail-section" id="success-metrics">
+      <h3>业务价值与试点建议</h3>
+      <div class="value-grid metric-grid">
+        <div><span>Primary Value</span><strong>${valueLabel}</strong></div>
+        <div><span>Process Area</span><strong>${category.kicker}</strong></div>
+        ${details.kpis.map((metric) => `<div><span>KPI</span><strong>${metric}</strong></div>`).join("")}
+      </div>
+      <div class="pilot-note">
+        <strong>Recommended Pilot</strong>
+        <p>${details.pilot}</p>
       </div>
     </section>
   `;
+}
+
+function richList(items) {
+  return items.map((entry) => {
+    if (typeof entry === "string") return `<article><p>${entry}</p></article>`;
+    return `<article><strong>${entry.title}</strong><p>${entry.text}</p></article>`;
+  }).join("");
+}
+
+function searchableDetails(details) {
+  if (!details) return "";
+  return Object.values(details).flatMap((value) => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => typeof entry === "string" ? entry : [entry.title, entry.text].join(" "));
+    }
+    return typeof value === "string" ? [value] : [];
+  }).join(" ");
 }
 
 tabs.addEventListener("click", (event) => {
