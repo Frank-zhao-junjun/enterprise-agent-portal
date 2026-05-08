@@ -210,29 +210,6 @@ h1 {
   color: var(--muted);
 }
 .search-box input { width: 100%; border: 0; outline: 0; color: var(--text); background: transparent; }
-.filter-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; }
-.filter-field {
-  min-height: 42px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  color: var(--muted);
-}
-.filter-field span { font-size: 12px; font-weight: 800; color: var(--cyan); }
-.filter-field select {
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-}
-.filter-field option { color: #111927; }
 .panel-description { margin: 0; padding: 0 26px 20px; color: var(--muted); line-height: 1.7; }
 .agent-grid {
   display: grid;

@@ -207,7 +207,7 @@ const valueFilters = [
   { id: "insight", label: "经营洞察", terms: ["洞察", "分析", "预测", "建议", "复盘", "问数", "定位", "归因"] }
 ];
 
-const state = { categoryId: categories[0].id, query: "", domain: "all", system: "all", value: "all" };
+const state = { categoryId: categories[0].id, query: "" };
 const tabs = document.getElementById("tabs");
 const grid = document.getElementById("agentGrid");
 const panelKicker = document.getElementById("panelKicker");
@@ -226,7 +226,7 @@ function renderTabs() {
 function renderPanel() {
   const category = categories.find((item) => item.id === state.categoryId) || categories[0];
   const query = state.query.trim().toLowerCase();
-  const isDiscoveryMode = Boolean(query || state.domain !== "all" || state.system !== "all" || state.value !== "all");
+  const isDiscoveryMode = Boolean(query);
   const agents = isDiscoveryMode ? filteredAgents(query) : category.agents.map((item, originalIndex) => ({ item, category, originalIndex }));
 
   if (isDiscoveryMode) {
@@ -245,22 +245,15 @@ function renderPanel() {
 function filteredAgents(query) {
   return categories.flatMap((category) => category.agents.map((item, originalIndex) => ({ item, category, originalIndex }))).filter(({ item, category }) => {
     const haystack = [category.tab, category.title, item.name, item.summary, item.scenario, item.impact, item.systems.join(" ")].join(" ").toLowerCase();
-    const selectedValue = valueFilters.find((filter) => filter.id === state.value);
     const matchesQuery = !query || haystack.includes(query);
-    const matchesDomain = state.domain === "all" || category.id === state.domain;
-    const matchesSystem = state.system === "all" || item.systems.includes(state.system);
-    const matchesValue = state.value === "all" || selectedValue?.terms.some((term) => haystack.includes(term));
-    return matchesQuery && matchesDomain && matchesSystem && matchesValue;
+    return matchesQuery;
   });
 }
 
 function discoveryDescription() {
   const fragments = [];
   if (state.query.trim()) fragments.push(`关键词“${state.query.trim()}”`);
-  if (state.domain !== "all") fragments.push(categories.find((item) => item.id === state.domain)?.tab || "指定板块");
-  if (state.system !== "all") fragments.push(`连接 ${state.system}`);
-  if (state.value !== "all") fragments.push(valueFilters.find((item) => item.id === state.value)?.label || "指定价值");
-  return fragments.length ? `已按 ${fragments.join("、")} 筛选，结果覆盖所有业务板块。` : "跨财务、销售、制造、供应链、采购、主数据等板块统一搜索 Agent、业务场景、系统连接和业务效果。";
+  return fragments.length ? `已按 ${fragments.join("、")} 搜索，结果覆盖所有业务板块。` : "跨财务、销售、制造、供应链、采购、主数据等板块统一搜索 Agent、业务场景、系统连接和业务效果。";
 }
 
 function cardTemplate(item, category, index, showDomain) {
@@ -279,7 +272,7 @@ function cardTemplate(item, category, index, showDomain) {
 }
 
 function emptyTemplate() {
-  return `<div class="empty-state"><h4>没有匹配结果</h4><p>换一个关键词或减少筛选条件试试，例如“月结”“合同”“视觉”“招聘”。</p></div>`;
+  return `<div class="empty-state"><h4>没有匹配结果</h4><p>换一个关键词试试，例如“月结”“合同”“视觉”“招聘”。</p></div>`;
 }
 
 function agentSvg(item, domain, large) {
@@ -426,9 +419,6 @@ tabs.addEventListener("click", (event) => {
   if (!button) return;
   state.categoryId = button.dataset.category;
   state.query = "";
-  state.domain = "all";
-  state.system = "all";
-  state.value = "all";
   agentSearch.value = "";
   renderTabs();
   renderPanel();
