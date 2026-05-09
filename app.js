@@ -630,8 +630,8 @@ function renderPanel() {
   const agents = isDiscoveryMode ? filteredAgents(query) : category.agents.map((item, originalIndex) => ({ item, category, originalIndex }));
 
   if (isDiscoveryMode) {
-    panelKicker.textContent = "Global Discovery";
-    panelTitle.textContent = `找到 ${agents.length} 个匹配 Agent`;
+    panelKicker.textContent = "全局搜索";
+    panelTitle.textContent = `找到 ${agents.length} 个匹配智能体`;
     panelDescription.textContent = discoveryDescription();
   } else {
     panelKicker.textContent = category.kicker;
@@ -708,7 +708,7 @@ function agentSvg(item, domain, large) {
       <circle cx="50%" cy="50%" r="${large ? 156 : 66}" fill="none" stroke="${primary}" stroke-opacity="0.22" stroke-dasharray="8 10"/>
       <circle cx="50%" cy="50%" r="${large ? 206 : 86}" fill="none" stroke="${secondary}" stroke-opacity="0.15" stroke-dasharray="3 12"/>
       <text x="50%" y="48%" text-anchor="middle" fill="#ffffff" font-size="${fontSize}" font-weight="900">${title}</text>
-      <text x="50%" y="${large ? "55%" : "63%"}" text-anchor="middle" fill="${primary}" font-size="${smallSize}" font-weight="800">${domain} · AI Agent</text>
+      <text x="50%" y="${large ? "55%" : "63%"}" text-anchor="middle" fill="${primary}" font-size="${smallSize}" font-weight="800">${domain} · AI智能体</text>
     </svg>
   `;
 }
@@ -734,13 +734,13 @@ function detailTemplate(item, category) {
   const detailContent = item.details ? detailedProfileTemplate(item, category, valueLabel) : standardProfileTemplate(item, category, valueLabel);
   return `
     <div class="detail-hero">
-      <p class="modal-domain">${category.title}</p>
-      <h2 id="modalTitle">${item.name}</h2>
-      <p>${item.summary}</p>
+      <p class="modal-domain">${category.tab}板块</p>
+      <h2 id="modalTitle">${visibleText(item.name)}</h2>
+      <p>${visibleText(item.summary)}</p>
       <div class="modal-tags">
-        <span>AI Agent</span>
-        <span>Beta</span>
-        <span>${category.kicker}</span>
+        <span>AI智能体</span>
+        <span>试用版</span>
+        <span>${category.tab}</span>
         <span>${valueLabel}</span>
       </div>
     </div>
@@ -748,35 +748,36 @@ function detailTemplate(item, category) {
     ${detailContent}
 
     <section class="detail-section related-section">
-      <h3>Related AI Offerings</h3>
+      <h3>关联的AI能力</h3>
       <div class="related-list">
-        ${relatedAgents.map((agentItem) => `<article><strong>${agentItem.name}</strong><p>${agentItem.summary}</p></article>`).join("")}
+        ${relatedAgents.map((agentItem) => `<article><strong>${visibleText(agentItem.name)}</strong><p>${visibleText(agentItem.summary)}</p></article>`).join("")}
       </div>
     </section>
   `;
 }
 
 function standardProfileTemplate(item, category, valueLabel) {
+  const valueCards = businessValueCards(item, category, item.details, valueLabel).slice(0, 5);
   return `
     <nav class="detail-nav" aria-label="详情分区">
-      <a href="#overview">Overview</a>
-      <a href="#benefits">Benefits</a>
-      <a href="#business-value">Business Value</a>
-      <a href="#additional-info">Additional Information</a>
-      <a href="#required-assets">Required Assets</a>
+      <a href="#overview">能力概览</a>
+      <a href="#benefits">核心收益</a>
+      <a href="#business-value">业务价值</a>
+      <a href="#additional-info">补充说明</a>
+      <a href="#required-assets">所需资产</a>
     </nav>
 
     <section class="detail-section" id="overview">
-      <h3>Overview</h3>
-      <p>${item.name} 面向${category.tab}场景，${item.scenario} 它将业务数据、规则校验和智能分析组织成可追踪的工作流，帮助团队从人工查找问题转向主动预警与闭环处理。</p>
+      <h3>能力概览</h3>
+      <p>${visibleText(item.name)} 面向${category.tab}场景，${visibleText(item.scenario)} 它将业务数据、规则校验和智能分析组织成可追踪的工作流，帮助团队从人工查找问题转向主动预警与闭环处理。</p>
     </section>
 
     <section class="detail-section" id="benefits">
-      <h3>Benefits</h3>
+      <h3>核心收益</h3>
       <div class="benefit-list">
         <article>
           <strong>降低人工处理负担</strong>
-          <p>${item.function}</p>
+          <p>${visibleText(item.function)}</p>
         </article>
         <article>
           <strong>提升流程透明度</strong>
@@ -784,33 +785,30 @@ function standardProfileTemplate(item, category, valueLabel) {
         </article>
         <article>
           <strong>形成可执行建议</strong>
-          <p>${item.impact}</p>
+          <p>${visibleText(item.impact)}</p>
         </article>
       </div>
     </section>
 
     <section class="detail-section" id="business-value">
-      <h3>Business Value</h3>
-      <div class="value-grid">
-        <div><span>Primary Value</span><strong>${valueLabel}</strong></div>
-        <div><span>Process Area</span><strong>${category.kicker}</strong></div>
-        <div><span>Recommended Pilot</span><strong>4-8 周 POC</strong></div>
-        <div><span>Human Control</span><strong>保留人工确认</strong></div>
+      <h3>业务价值</h3>
+      <div class="value-grid metric-grid">
+        ${valueCards.map((card) => valueCardTemplate(card)).join("")}
       </div>
     </section>
 
     <section class="detail-section" id="additional-info">
-      <h3>Additional Information</h3>
+      <h3>补充说明</h3>
       <dl class="info-list">
-        <div><dt>AI Type</dt><dd>企业流程 Agent</dd></div>
-        <div><dt>Works With</dt><dd>${item.systems.join("、")}</dd></div>
-        <div><dt>Applicable Industries</dt><dd>制造、零售、贸易、集团型企业</dd></div>
-        <div><dt>Minimum Required Version</dt><dd>具备可用业务数据接口或可导出数据源</dd></div>
+        <div><dt>能力类型</dt><dd>企业流程智能体</dd></div>
+        <div><dt>协同系统</dt><dd>${item.systems.join("、")}</dd></div>
+        <div><dt>适用行业</dt><dd>制造、零售、贸易、集团型企业</dd></div>
+        <div><dt>接入前提</dt><dd>具备可用业务数据接口或可导出数据源</dd></div>
       </dl>
     </section>
 
     <section class="detail-section" id="required-assets">
-      <h3>Required Assets</h3>
+      <h3>所需资产</h3>
       <div class="asset-list">
         ${item.systems.map((system) => `<span>${system}</span>`).join("")}
         <span>业务规则库</span>
@@ -823,19 +821,20 @@ function standardProfileTemplate(item, category, valueLabel) {
 
 function detailedProfileTemplate(item, category, valueLabel) {
   const details = item.details;
+  const valueCards = businessValueCards(item, category, details, valueLabel).slice(0, 7);
   return `
     <nav class="detail-nav" aria-label="详情分区">
       <a href="#pain-points">业务痛点</a>
       <a href="#triggers">触发条件</a>
-      <a href="#workflow">工作流</a>
+      <a href="#workflow">工作方式</a>
       <a href="#data-assets">输入输出</a>
       <a href="#governance">人工把关</a>
-      <a href="#success-metrics">指标与试点</a>
+      <a href="#success-metrics">业务价值</a>
     </nav>
 
     <section class="detail-section" id="pain-points">
       <h3>业务痛点与适用场景</h3>
-      <p>${details.overview}</p>
+      <p>${visibleText(details.overview)}</p>
       <div class="detail-list detailed-list">
         ${richList(details.painPoints)}
       </div>
@@ -844,14 +843,14 @@ function detailedProfileTemplate(item, category, valueLabel) {
     <section class="detail-section" id="triggers">
       <h3>什么时候触发</h3>
       <ul class="signal-list">
-        ${details.triggers.map((trigger) => `<li>${trigger}</li>`).join("")}
+        ${details.triggers.map((trigger) => `<li>${visibleText(trigger)}</li>`).join("")}
       </ul>
     </section>
 
     <section class="detail-section" id="workflow">
-      <h3>Agent 如何工作</h3>
+      <h3>智能体如何工作</h3>
       <ol class="workflow-list">
-        ${details.workflow.map((step) => `<li>${step}</li>`).join("")}
+        ${details.workflow.map((step) => `<li>${visibleText(step)}</li>`).join("")}
       </ol>
     </section>
 
@@ -860,42 +859,95 @@ function detailedProfileTemplate(item, category, valueLabel) {
       <div class="detail-split">
         <article>
           <h4>需要接入的数据</h4>
-          <div class="asset-list">${details.inputs.map((input) => `<span>${input}</span>`).join("")}</div>
+          <div class="asset-list">${details.inputs.map((input) => `<span>${visibleText(input)}</span>`).join("")}</div>
         </article>
         <article>
           <h4>交付给业务的结果</h4>
-          <div class="asset-list">${details.outputs.map((output) => `<span>${output}</span>`).join("")}</div>
+          <div class="asset-list">${details.outputs.map((output) => `<span>${visibleText(output)}</span>`).join("")}</div>
         </article>
       </div>
     </section>
 
     <section class="detail-section" id="governance">
       <h3>人工把关与安全边界</h3>
-      <p>Agent 负责识别、解释、建议和催办，以下动作保留人工确认，避免自动化越权。</p>
+      <p>智能体负责识别、解释、建议和催办，以下动作保留人工确认，避免自动化越权。</p>
       <ul class="signal-list control-list">
-        ${details.humanControls.map((control) => `<li>${control}</li>`).join("")}
+        ${details.humanControls.map((control) => `<li>${visibleText(control)}</li>`).join("")}
       </ul>
     </section>
 
     <section class="detail-section" id="success-metrics">
-      <h3>业务价值与试点建议</h3>
+      <h3>业务价值</h3>
       <div class="value-grid metric-grid">
-        <div><span>Primary Value</span><strong>${valueLabel}</strong></div>
-        <div><span>Process Area</span><strong>${category.kicker}</strong></div>
-        ${details.kpis.map((metric) => `<div><span>KPI</span><strong>${metric}</strong></div>`).join("")}
-      </div>
-      <div class="pilot-note">
-        <strong>Recommended Pilot</strong>
-        <p>${details.pilot}</p>
+        ${valueCards.map((card) => valueCardTemplate(card)).join("")}
       </div>
     </section>
   `;
 }
 
+function valueCardTemplate(card) {
+  return `<div><span>${card.label}</span><strong>${visibleText(card.title)}</strong><p>${visibleText(card.text)}</p></div>`;
+}
+
+function businessValueCards(item, category, details, valueLabel) {
+  const metrics = uniqueList((details?.kpis?.length ? details.kpis : [item.impact]).map((metric) => trimPeriod(metric))).slice(0, 5);
+  return [
+    {
+      label: "核心价值",
+      title: valueLabel,
+      text: `${visibleText(item.name)}聚焦${category.tab}流程中的关键判断和执行断点，把${item.systems.join("、") || "核心业务系统"}里的数据、规则和状态统一起来。业务团队不只看到一个提醒，而是能看到原因、影响对象、建议动作和责任闭环。`
+    },
+    ...metrics.map((metric) => ({
+      label: "价值指标",
+      title: metric,
+      text: metricExplanation(metric, item, category)
+    })),
+    {
+      label: "管理可控",
+      title: "关键决策保留人工确认",
+      text: `${visibleText(item.name)}只负责识别、解释、建议和催办，涉及审批、承诺、放行、付款、法务意见等关键动作仍由负责人确认，既提升效率，也保留管理边界。`
+    }
+  ];
+}
+
+function metricExplanation(metric, item, category) {
+  const metricText = visibleText(trimPeriod(metric));
+  const name = visibleText(item.name);
+  const systemsText = item.systems.join("、") || "核心业务系统";
+
+  if (/周期|时长|时间|秒|分钟|天|响应|缩短|压缩/.test(metricText)) {
+    return `这个指标来自等待时间和人工流转的减少。${name}会集中读取${systemsText}中的状态、单据和异常，把原本分散查询、反复催办、人工汇总的动作前置处理，让业务人员更快知道问题在哪里、下一步该由谁处理。`;
+  }
+
+  if (/下降|降低|减少|风险|错|漏|异常|逾期|坏账|缺料|停线|过检|漏检/.test(metricText)) {
+    return `这个指标说明风险被更早发现并持续闭环。${name}会结合${category.tab}规则、历史记录和当前流程状态，识别异常来源、影响范围和责任节点，减少问题拖到后段才集中处理。`;
+  }
+
+  if (/提升|提高|改善|覆盖|准确|准时|通过率|一致性|可追溯|兑现率|识别率/.test(metricText)) {
+    return `这个指标体现质量、准确性或覆盖面的提升。${name}把${systemsText}中的数据与业务规则统一校验，沉淀可复用的判断依据，减少不同人员凭经验处理造成的波动。`;
+  }
+
+  return `这个指标用于衡量${name}是否真正改善${category.tab}流程。通过持续记录输入、判断依据、处理动作和结果，团队可以把单次提醒沉淀为可复盘、可审计、可优化的运营能力。`;
+}
+
+function visibleText(value) {
+  return String(value || "")
+    .replace(/AI\s*Agent/g, "AI智能体")
+    .replace(/\s*Agent\b/g, "智能体")
+    .replace(/\bBeta\b/g, "试用版")
+    .replace(/\bPOC\b/g, "概念验证")
+    .replace(/\bKPI\b/g, "指标")
+    .replace(/\bHR\b/g, "人力资源")
+    .replace(/\bJD\b/g, "岗位说明书")
+    .replace(/\bNLP\b/g, "自然语言处理")
+    .replace(/\bTop\b/g, "重点")
+    .replace(/\bWeb\b/g, "网络");
+}
+
 function richList(items) {
   return items.map((entry) => {
-    if (typeof entry === "string") return `<article><p>${entry}</p></article>`;
-    return `<article><strong>${entry.title}</strong><p>${entry.text}</p></article>`;
+    if (typeof entry === "string") return `<article><p>${visibleText(entry)}</p></article>`;
+    return `<article><strong>${visibleText(entry.title)}</strong><p>${visibleText(entry.text)}</p></article>`;
   }).join("");
 }
 
