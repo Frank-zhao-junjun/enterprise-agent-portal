@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-architecture-designer.local/schemas/architecture-output.v1.json",
+  "title": "ArchitectureOutput",
+  "description": "Hub-and-Spoke multi-agent architecture; handoff_matrix keys and values use agent id (not display name). Aligns with openai-cs-agents-demo topology.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "triage_agent",
+    "spoke_agents",
+    "business_rules",
+    "handoff_matrix"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "triage_agent": {
+      "$ref": "#/$defs/triageAgent"
+    },
+    "spoke_agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/spokeAgent" }
+    },
+    "business_rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/businessRule" }
+    },
+    "handoff_matrix": {
+      "type": "object",
+      "description": "Map source_agent_id -> list of target_agent_id",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+      }
+    }
+  },
+  "$defs": {
+    "toolDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "triageAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "icon", "color", "tools"],
+      "properties": {
+        "id": { "type": "string", "const": "triage" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "icon": { "type": "string", "minLength": 1 },
+        "color": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/toolDefinition" }
+        }
+      }
+    },
+    "spokeAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "icon", "color", "tools"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "not": { "const": "triage" }
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "icon": { "type": "string", "minLength": 1 },
+        "color": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/toolDefinition" }
+        }
+      }
+    },
+    "businessRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "description",
+        "applies_to",
+        "trigger_example"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["guardrail", "constraint", "escalation", "routing"]
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "applies_to": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "minItems": 1
+        },
+        "trigger_example": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
