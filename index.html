@@ -1,1277 +1,1582 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenAI Airlines Agent Demo</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+<title>Agent Architecture Designer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 <style>
 /* === RESET & BASE === */
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --blue:#2563eb;--blue-light:#3b82f6;--blue-dark:#1d4ed8;
-  --green:#059669;--purple:#7c3aed;--red:#dc2626;--orange:#d97706;--cyan:#0891b2;
-  --bg:#f8fafc;--surface:#ffffff;--border:#e2e8f0;--border-light:#f1f5f9;
-  --text:#0f172a;--text-sec:#475569;--text-muted:#94a3b8;
-  --radius:12px;--radius-sm:8px;--radius-xs:6px;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
-  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
-  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
-  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);
+:root {
+  --bg:#f8fafc; --surface:#ffffff; --surface-2:#f1f5f9;
+  --border:#e2e8f0; --text:#0f172a; --text-2:#64748b;
+  --primary:#2563eb; --primary-2:#1d4ed8;
+  --success:#059669; --warning:#d97706;
+  --danger:#dc2626; --info:#0891b2;
+  --radius:10px; --shadow:0 1px 3px rgba(0,0,0,.1);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.12);
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:#94a3b8}
-
-/* === HEADER === */
-.header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:14px 24px;position:sticky;top:0;z-index:50}
-.header-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.header-icon{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;backdrop-filter:blur(4px)}
-.header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
-.header p{color:#bfdbfe;font-size:12px;margin-top:1px}
-.header-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.header-badge{font-size:11px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:999px;backdrop-filter:blur(4px)}
-.header-link{color:#bfdbfe;text-decoration:none;font-size:12px;transition:color .2s}
-.header-link:hover{color:#fff}
-.lang-toggle{display:flex;align-items:center;background:rgba(255,255,255,.12);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(4px)}
-.lang-btn{font-size:12px;font-weight:600;border:none;cursor:pointer;padding:5px 12px;transition:all .2s;color:rgba(255,255,255,.6);background:transparent}
-.lang-btn:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.08)}
-.lang-btn.active{color:#fff;background:rgba(255,255,255,.2)}
-
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* === LAYOUT === */
+.layout{display:flex;flex-direction:column;height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{font-size:24px}
+.header-title{font-size:18px;font-weight:700;color:var(--text)}
+.header-title span{font-size:12px;color:var(--text-2);font-weight:400;margin-left:8px}
+.header-right{display:flex;align-items:center;gap:10px}
+.lang-btn{padding:6px 14px;border:1px solid var(--border);background:var(--surface);border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:all .2s}
+.lang-btn:hover{background:var(--surface-2)}
+.lang-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.main{display:flex;flex:1;overflow:hidden}
+/* === SIDEBAR === */
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.new-agent-btn{width:100%;padding:9px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .2s}
+.new-agent-btn:hover{background:var(--primary-2)}
+.agent-list{flex:1;overflow-y:auto;padding:8px}
+.agent-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;transition:all .15s;display:flex;align-items:center;gap:8px}
+.agent-item:hover{background:var(--surface-2)}
+.agent-item.active{background:#eff6ff;border:1px solid #bfdbfe}
+.agent-item-icon{font-size:16px;flex-shrink:0}
+.agent-item-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-item-category{font-size:10px;color:var(--text-2);padding:2px 6px;background:var(--surface-2);border-radius:10px;flex-shrink:0}
+.agent-item-delete{opacity:0;padding:4px;background:none;border:none;cursor:pointer;color:var(--text-2);border-radius:4px;font-size:14px;transition:all .15s}
+.agent-item:hover .agent-item-delete{opacity:1}
+.agent-item-delete:hover{color:var(--danger);background:#fee2e2}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.empty-hint{text-align:center;color:var(--text-2);font-size:13px;padding:20px 0}
+/* === MAIN CONTENT === */
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+/* === AGENT HEADER === */
+.agent-header{padding:20px 24px 0;border-bottom:1px solid var(--border);background:var(--surface)}
+.agent-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.agent-name-input{font-size:22px;font-weight:700;border:none;background:transparent;outline:none;color:var(--text);width:100%;padding:4px 0;border-bottom:2px solid transparent;transition:border-color .2s}
+.agent-name-input:focus{border-bottom-color:var(--primary)}
+.agent-name-input::placeholder{color:var(--text-2)}
+.agent-header-meta{display:flex;align-items:center;gap:16px;font-size:13px;color:var(--text-2)}
+.agent-header-meta span{display:flex;align-items:center;gap:4px}
+.version-tabs{display:flex;gap:0;margin-top:4px}
+.version-tab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s}
+.version-tab:hover{color:var(--text)}
+.version-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.new-version-btn{padding:8px 16px;font-size:13px;font-weight:500;color:var(--primary);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s}
+.new-version-btn:hover{border-bottom-color:var(--primary)}
 /* === TABS === */
-.tabs{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:40}
-.tabs-inner{max-width:1400px;margin:0 auto;display:flex;gap:2px;padding:0 24px}
-.tab-btn{padding:12px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-muted);transition:all .2s;position:relative}
-.tab-btn:hover{color:var(--text-sec);background:var(--border-light)}
-.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
-.tab-btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:6px}
-
-/* === MAIN === */
-.main{max-width:1400px;margin:0 auto;padding:20px 24px}
-.tab-content{display:none;animation:fadeIn .3s ease}
-.tab-content.active{display:block}
-
-/* === TAB1: INTERACTIVE DEMO === */
-.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:780px;margin:0 auto 20px}
-.scenario-card{padding:20px;background:var(--surface);border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;text-align:left;transition:all .2s;position:relative;overflow:hidden}
-.scenario-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:0;transition:opacity .2s}
-.scenario-card:hover{border-color:var(--blue);box-shadow:var(--shadow-md)}
-.scenario-card:hover::before{opacity:1}
-.scenario-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
-.scenario-card.selected::before{opacity:1}
-.scenario-card[data-color="blue"]::before{background:var(--blue)}
-.scenario-card[data-color="green"]::before{background:var(--green)}
-.scenario-card[data-color="red"]::before{background:var(--red)}
-.scenario-card .s-icon{font-size:28px;margin-bottom:10px}
-.scenario-card .s-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px}
-.scenario-card .s-desc{font-size:12px;color:var(--text-sec);line-height:1.4}
-.scenario-card.selected .s-title{color:var(--blue)}
-
-.chat-layout{display:flex;gap:16px;height:calc(100vh - 260px);min-height:480px}
-.chat-panel{flex:1;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
-.agent-panel{width:400px;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
-
-.panel-header{padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.panel-header.chat-h{background:var(--blue);color:#fff}
-.panel-header.agent-h{background:linear-gradient(135deg,#1e293b,#334155);color:#fff}
-.panel-header h3{font-size:13px;font-weight:600;flex:1}
-.panel-actions{display:flex;gap:5px}
-.action-btn{font-size:11px;background:rgba(255,255,255,.15);border:none;color:#fff;padding:4px 10px;border-radius:var(--radius-xs);cursor:pointer;transition:all .2s;font-weight:500}
-.action-btn:hover{background:rgba(255,255,255,.25)}
-.action-btn:disabled{opacity:.4;cursor:not-allowed}
-.action-btn.primary{background:rgba(255,255,255,.25)}
-.action-btn.primary:hover{background:rgba(255,255,255,.35)}
-
-.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f8fafc}
-.msg{display:flex;animation:fadeIn .3s ease}
-.msg.user{justify-content:flex-end}
-.msg.agent{justify-content:flex-start}
-.msg-bubble{max-width:78%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;white-space:pre-wrap}
-.msg.user .msg-bubble{background:var(--blue);color:#fff;border-bottom-right-radius:4px}
-.msg.agent .msg-bubble{background:var(--surface);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;box-shadow:var(--shadow-sm)}
-.agent-label{display:flex;align-items:center;gap:5px;margin-bottom:3px}
-.agent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.agent-name{font-size:11px;color:var(--text-muted);font-weight:500}
-
-.typing-indicator{display:flex;gap:4px;padding:10px 16px;align-items:center}
-.typing-indicator span{width:7px;height:7px;background:#94a3b8;border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out}
-.typing-indicator span:nth-child(2){animation-delay:.2s}
-.typing-indicator span:nth-child(3){animation-delay:.4s}
-
-.progress-bar{padding:8px 16px;background:var(--surface);border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-shrink:0}
-.progress-track{flex:1;background:#e2e8f0;border-radius:999px;height:5px}
-.progress-fill{background:var(--blue);height:5px;border-radius:999px;transition:width .4s ease}
-.progress-text{font-size:10px;color:var(--text-muted);min-width:60px;text-align:right}
-
-/* Agent panel content */
-.agent-content{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;background:#f8fafc}
-.section-title{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-
-.active-agent-card{padding:12px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--surface);animation:fadeIn .3s}
-.active-agent-card .aa-top{display:flex;align-items:center;gap:10px}
-.active-agent-card .aa-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.active-agent-card .aa-name{font-size:14px;font-weight:600}
-.active-agent-card .aa-desc{font-size:11px;color:var(--text-sec)}
-.active-agent-card .aa-tools{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
-.tool-badge{font-size:10px;background:#f1f5f9;color:var(--text-sec);padding:2px 7px;border-radius:4px;border:1px solid var(--border-light)}
-
-.agent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.agent-mini{padding:7px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border);text-align:center;background:var(--surface);transition:all .25s;cursor:default}
-.agent-mini.active-agent{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.15);background:#eff6ff}
-.agent-mini.handoff-agent{opacity:.85;border-style:dashed;border-color:#94a3b8}
-.agent-mini.inactive-agent{opacity:.3;filter:grayscale(1)}
-.agent-mini .m-icon{font-size:15px}
-.agent-mini .m-name{font-size:8px;font-weight:600;color:var(--text-sec);line-height:1.2;margin-top:2px}
-.agent-mini .m-badge{display:inline-block;margin-top:3px;font-size:7px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:999px;font-weight:500}
-
-.context-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-.context-item{display:flex;align-items:center;gap:5px;padding:5px 7px;background:var(--surface);border-radius:var(--radius-xs);border:1px solid var(--border-light)}
-.ctx-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.ctx-dot.on{background:var(--blue-light)}.ctx-dot.off{background:#d1d5db}
-.ctx-key{font-size:10px;color:var(--text-muted)}
-.ctx-val{font-size:10px;color:var(--text);font-weight:500}
-.ctx-val.null-val{color:#d1d5db;font-style:italic}
-
-.guardrails-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.guardrail-card{padding:8px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);transition:all .3s}
-.guardrail-card.passed{border-color:#86efac;background:#f0fdf4}
-.guardrail-card.failed{border-color:#fca5a5;background:#fef2f2}
-.gr-top{display:flex;align-items:center;gap:5px}
-.gr-name{font-size:10px;font-weight:600;color:var(--text)}
-.gr-status{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 6px;border-radius:999px;color:#fff;font-weight:500}
-.gr-status.pass{background:#10b981}.gr-status.fail{background:#ef4444}
-.gr-reason{margin-top:3px;font-size:9px;color:#b91c1c;line-height:1.3}
-
-.events-list{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto}
-.event-item{display:flex;align-items:flex-start;gap:7px;padding:7px 8px;background:var(--surface);border-radius:var(--radius-xs);border:1px solid var(--border-light);font-size:11px;animation:slideIn .3s}
-.event-badge{padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;white-space:nowrap;flex-shrink:0}
-.event-badge.handoff{background:#f3e8ff;color:var(--purple)}
-.event-badge.tool_call{background:#fef3c7;color:#92400e}
-.event-badge.tool_output{background:#d1fae5;color:#065f46}
-.event-badge.context_update{background:#dbeafe;color:#1e40af}
-.event-badge.guardrail{background:#fee2e2;color:#991b1b}
-.event-text{color:var(--text-sec);line-height:1.3;min-width:0;word-break:break-word}
-
-.welcome-screen{text-align:center;margin-top:60px;color:var(--text-muted)}
-.welcome-screen .w-icon{font-size:48px;margin-bottom:10px;opacity:.6}
-.welcome-screen h3{font-size:17px;font-weight:600;color:var(--text-sec)}
-.welcome-screen p{font-size:13px;margin-top:4px}
-
-/* === TAB2: ARCHITECTURE === */
-.arch-section{margin-bottom:32px}
-.arch-section h2{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
-.arch-section .arch-desc{font-size:13px;color:var(--text-sec);margin-bottom:16px}
-
-.svg-container{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:24px;overflow:hidden;margin-bottom:24px}
-.svg-container svg{width:100%;height:auto;display:block}
-
-.concept-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
-.concept-card{padding:20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);transition:all .2s}
-.concept-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.concept-card .cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
-.concept-card h3{font-size:15px;font-weight:600;margin-bottom:6px}
-.concept-card p{font-size:12px;color:var(--text-sec);line-height:1.5}
-
-.flow-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;position:relative}
-.flow-step{padding:16px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);text-align:center;position:relative;transition:all .2s}
-.flow-step:hover{box-shadow:var(--shadow-md)}
-.flow-step .step-num{width:28px;height:28px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin:0 auto 8px}
-.flow-step h4{font-size:13px;font-weight:600;margin-bottom:4px}
-.flow-step p{font-size:11px;color:var(--text-sec);line-height:1.4}
-.flow-arrow{position:absolute;right:-9px;top:50%;transform:translateY(-50%);z-index:2;color:var(--blue);font-size:16px}
-
-.tech-stack{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-.tech-item{padding:8px 16px;background:var(--surface);border-radius:999px;border:1px solid var(--border);font-size:12px;color:var(--text-sec);display:flex;align-items:center;gap:6px;transition:all .2s}
-.tech-item:hover{border-color:var(--blue);color:var(--blue)}
-.tech-item .tech-dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
-
-/* === TAB3: AGENT DETAILS === */
-.agent-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
-.agent-detail-card{padding:16px;background:var(--surface);border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;transition:all .2s}
-.agent-detail-card:hover{box-shadow:var(--shadow-md);border-color:var(--blue-light)}
-.agent-detail-card.expanded{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-.adc-top{display:flex;align-items:center;gap:10px}
-.adc-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.adc-name{font-size:14px;font-weight:600}
-.adc-tool-count{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500}
-.adc-desc{font-size:12px;color:var(--text-sec);margin-top:8px;line-height:1.4}
-
-.agent-expanded{margin-bottom:20px;animation:fadeIn .3s}
-.aex-header{padding:16px;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:12px;color:#fff}
-.aex-header .aex-icon{font-size:24px}
-.aex-header h3{font-size:16px;font-weight:700}
-.aex-header p{font-size:12px;opacity:.85}
-.aex-body{padding:20px;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.detail-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.tool-item{padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px}
-.tool-item .ti-name{font-size:13px;font-weight:600;color:var(--text);font-family:'SF Mono',Monaco,Consolas,monospace}
-.tool-item .ti-desc{font-size:11px;color:var(--text-sec);margin-top:3px}
-.tool-item .ti-params{font-size:10px;color:var(--blue);margin-top:3px;font-family:'SF Mono',Monaco,Consolas,monospace}
-.handoff-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px;cursor:pointer;transition:all .2s}
-.handoff-item:hover{background:#eff6ff;border-color:var(--blue-light)}
-.handoff-item .hi-icon{font-size:16px}
-.handoff-item .hi-name{font-size:13px;font-weight:600;flex:1}
-.handoff-item .hi-desc{font-size:10px;color:var(--text-sec)}
-.handoff-item .hi-arrow{color:var(--blue);font-weight:700}
-.guardrail-item{padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px}
-.guardrail-item .gi-top{display:flex;align-items:center;gap:6px}
-.guardrail-item .gi-name{font-size:12px;font-weight:600}
-.guardrail-item .gi-desc{font-size:11px;color:var(--text-sec);margin-top:3px;line-height:1.4}
-
-.handoff-matrix{margin-top:24px}
-.handoff-matrix h2{font-size:16px;font-weight:700;margin-bottom:12px}
-.matrix-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--surface)}
-.matrix-table th{padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-sec);background:#f8fafc;border-bottom:1px solid var(--border);text-align:left}
-.matrix-table th:first-child{width:160px}
-.matrix-table td{padding:8px 12px;font-size:11px;border-bottom:1px solid var(--border-light);text-align:center;vertical-align:middle}
-.matrix-table td:first-child{text-align:left}
-.matrix-table tr:last-child td{border-bottom:none}
-.matrix-from{display:flex;align-items:center;gap:6px;font-weight:500}
-.handoff-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:3px 8px;border-radius:999px;font-weight:500;transition:transform .15s}
-.handoff-badge:hover{transform:scale(1.05)}
-.no-handoff{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f1f5f9;color:#cbd5e1;font-size:12px;font-weight:300}
-.self-cell{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f8fafc;color:#e2e8f0;font-size:11px}
-.handoff-yes{background:#f0fdf4}
-
-/* === ANIMATIONS === */
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-@keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes rotateIn{from{transform:rotate(-10deg) scale(.9);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
-
-/* === RESPONSIVE === */
-@media(max-width:1024px){
-  .chat-layout{flex-direction:column;height:auto}
-  .agent-panel{width:100%;max-height:400px}
-  .scenario-grid{grid-template-columns:1fr}
-  .concept-cards{grid-template-columns:1fr}
-  .flow-steps{grid-template-columns:repeat(2,1fr)}
-  .agent-cards-grid{grid-template-columns:repeat(2,1fr)}
-  .aex-body{grid-template-columns:1fr}
-}
-@media(max-width:640px){
-  .agent-cards-grid{grid-template-columns:1fr}
-  .flow-steps{grid-template-columns:1fr}
-  .flow-arrow{display:none}
-}
+.tabs{display:flex;gap:0;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{padding:12px 20px;font-size:14px;font-weight:500;color:var(--text-2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-badge{padding:2px 7px;background:var(--surface-2);border-radius:10px;font-size:11px;font-weight:600;color:var(--text-2)}
+.tab-content{flex:1;overflow-y:auto;padding:24px}
+/* === FORMS === */
+.form-section{margin-bottom:28px}
+.form-section-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:6px;display:block}
+.form-input,.form-textarea,.form-select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:var(--surface);outline:none;transition:border-color .2s;resize:vertical}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-textarea{min-height:120px;font-family:inherit}
+.form-hint{font-size:12px;color:var(--text-2);margin-top:4px}
+/* === DEMO VERSION LIST === */
+.demo-list{margin-top:16px}
+.demo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:all .2s}
+.demo-card:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.demo-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.demo-card-version{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.demo-card-version .version-badge{padding:2px 8px;background:#eff6ff;color:var(--primary);border-radius:10px;font-size:12px;font-weight:600}
+.demo-card-time{font-size:12px;color:var(--text-2)}
+.demo-card-summary{font-size:13px;color:var(--text-2);margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap}
+.demo-card-summary span{display:flex;align-items:center;gap:4px}
+.demo-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-2)}
+.btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-danger{background:#fee2e2;color:var(--danger)}
+.btn-danger:hover{background:#fecaca}
+.btn-success{background:#d1fae5;color:var(--success)}
+.btn-success:hover{background:#a7f3d0}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* === GENERATE SECTION === */
+.generate-section{background:linear-gradient(135deg,#eff6ff 0%,#f5f3ff 100%);border:1px solid #bfdbfe;border-radius:var(--radius);padding:24px;margin-top:16px;text-align:center}
+.generate-section h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.generate-section p{font-size:13px;color:var(--text-2);margin-bottom:16px;max-width:500px;margin-left:auto;margin-right:auto}
+.generate-btn{width:100%;max-width:320px;padding:12px 24px;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.generate-btn:hover{background:var(--primary-2);transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.generate-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+/* === GENERATING STATE === */
+.generating-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+.generating-card{background:var(--surface);border-radius:16px;padding:32px;max-width:500px;width:90%;box-shadow:var(--shadow-lg)}
+.generating-title{font-size:18px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.generating-steps{font-size:13px;color:var(--text-2);margin-bottom:20px}
+.generating-stream{background:var(--surface-2);border-radius:8px;padding:16px;min-height:100px;max-height:200px;overflow-y:auto;font-size:13px;color:var(--text);line-height:1.6;font-family:monospace;white-space:pre-wrap;margin-bottom:20px}
+.generating-stream .thinking{color:var(--primary)}
+.generating-stream .done{color:var(--success);font-weight:600}
+.generating-actions{display:flex;justify-content:center}
+/* === DEMO MODE === */
+.demo-overlay{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;overflow:hidden}
+.demo-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.demo-header-left{display:flex;align-items:center;gap:12px}
+.back-btn{padding:7px 14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:6px}
+.back-btn:hover{background:#e2e8f0}
+.demo-title{font-size:16px;font-weight:600;color:var(--text)}
+.demo-title span{font-size:13px;color:var(--text-2);font-weight:400;margin-left:6px}
+.scenario-select{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--surface);cursor:pointer}
+.demo-body{display:flex;flex:1;overflow:hidden}
+.demo-chat{flex:0 0 42%;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden}
+.demo-chat-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
+.demo-chat-header .scenario-tag{padding:2px 8px;background:#eff6ff;color:var(--primary);border-radius:10px;font-size:11px;font-weight:600}
+.demo-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{margin-bottom:4px}
+.msg-customer .msg-bubble{background:#eff6ff;border:1px solid #bfdbfe;margin-left:0}
+.msg-agent .msg-bubble{background:var(--surface-2);margin-right:40px}
+.msg-tool .msg-bubble{background:#fef9c3;border:1px solid #fde047;margin-left:20px;font-size:13px}
+.msg-handoff .msg-bubble{background:#f0fdf4;border:1px solid #86efac;margin-left:20px;font-size:13px}
+.msg-guardrail .msg-bubble{background:#fee2e2;border:1px solid #fca5a5;margin-left:20px;font-size:13px}
+.msg-constraint .msg-bubble{background:#fef3c7;border:1px solid #fcd34d;margin-left:20px;font-size:13px}
+.msg-escalation .msg-bubble{background:#fff7ed;border:1px solid #fed7aa;margin-left:20px;font-size:13px}
+.msg-routing .msg-bubble{background:#eff6ff;border:1px solid #93c5fd;margin-left:20px;font-size:13px}
+.msg-bubble{padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.5}
+.msg-label{font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.msg-customer .msg-label{color:#2563eb}
+.msg-agent .msg-label{color:var(--text-2)}
+.msg-tool .msg-label{color:#a16207}
+.msg-rule{font-size:11px;font-weight:600;margin-bottom:4px;padding:3px 8px;border-radius:10px;display:inline-block}
+.msg-rule.guardrail{background:#fee2e2;color:var(--danger)}
+.msg-rule.constraint{background:#fef3c7;color:#a16207}
+.msg-rule.escalation{background:#fff7ed;color:#c2410c}
+.msg-rule.routing{background:#eff6ff;color:#2563eb}
+.demo-agent{flex:1;overflow-y:auto;padding:16px;background:var(--bg)}
+.demo-agent-section{margin-bottom:20px}
+.demo-agent-section-title{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.agent-active-card{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-radius:10px;border:2px solid var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.agent-active-icon{font-size:24px}
+.agent-active-name{font-size:15px;font-weight:700;color:var(--text)}
+.agent-active-role{font-size:12px;color:var(--text-2)}
+.agent-active-badge{padding:2px 8px;background:var(--primary);color:#fff;border-radius:10px;font-size:11px;font-weight:600;margin-left:auto}
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
+.agent-mini-card{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border-radius:8px;border:1px solid var(--border);transition:all .15s}
+.agent-mini-card.active{border-color:var(--primary);background:#eff6ff}
+.agent-mini-icon{font-size:18px}
+.agent-mini-name{font-size:12px;font-weight:500;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-mini-card .active-dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0;display:none}
+.agent-mini-card.active .active-dot{display:block}
+.context-box{background:var(--surface);border-radius:8px;border:1px solid var(--border);padding:12px;margin-top:8px}
+.context-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
+.context-row:last-child{border-bottom:none}
+.context-label{color:var(--text-2)}
+.context-value{font-weight:500;color:var(--text);font-family:monospace;font-size:12px}
+.rules-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.rule-mini-card{padding:10px 12px;background:var(--surface);border-radius:8px;border:1px solid var(--border)}
+.rule-mini-name{font-size:12px;font-weight:600;margin-bottom:4px}
+.rule-mini-status{font-size:11px;padding:2px 6px;border-radius:8px;font-weight:600;display:inline-block}
+.rule-mini-status.passed{background:#d1fae5;color:var(--success)}
+.rule-mini-status.pending{background:var(--surface-2);color:var(--text-2)}
+.rule-mini-status.failed{background:#fee2e2;color:var(--danger)}
+.events-list{margin-top:8px;max-height:200px;overflow-y:auto}
+.event-item{font-size:12px;padding:6px 10px;background:var(--surface);border-radius:6px;border-left:3px solid var(--primary);margin-bottom:4px;font-family:monospace;color:var(--text-2)}
+.event-item.success{border-left-color:var(--success)}
+.event-item.error{border-left-color:var(--danger)}
+.event-item.info{border-left-color:var(--info)}
+.demo-footer{padding:12px 20px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.demo-controls{display:flex;align-items:center;gap:8px}
+.demo-step-label{font-size:13px;color:var(--text-2);min-width:80px;text-align:center}
+.progress-bar{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;max-width:300px}
+.progress-fill{height:100%;background:var(--primary);transition:width .3s;border-radius:3px}
+/* === ARCHITECTURE TAB === */
+.arch-container{max-width:900px;margin:0 auto}
+.arch-svg-container{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:24px;margin-bottom:20px;overflow-x:auto}
+.arch-svg{width:100%;min-width:600px;height:auto}
+/* === DETAIL TAB === */
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .2s}
+.detail-card:hover{border-color:var(--primary)}
+.detail-card.expanded{grid-column:1/-1}
+.detail-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.detail-card-icon{font-size:24px}
+.detail-card-title{font-size:16px;font-weight:700;flex:1}
+.detail-card-expand{font-size:12px;color:var(--text-2);padding:4px 8px;background:var(--surface-2);border-radius:6px}
+.detail-card-desc{font-size:13px;color:var(--text-2);line-height:1.5}
+.detail-card-body{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:none}
+.detail-card.expanded .detail-card-body{display:block}
+.detail-section-title{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px}
+.tool-item,.handoff-item{font-size:13px;padding:8px 12px;background:var(--surface-2);border-radius:6px;margin-bottom:6px}
+.tool-item strong,.handoff-item strong{color:var(--primary)}
+.rule-item{font-size:13px;padding:8px 12px;border-radius:6px;margin-bottom:6px;border-left:3px solid}
+.rule-item.guardrail{background:#fee2e2;border-left-color:var(--danger)}
+.rule-item.constraint{background:#fef3c7;border-left-color:var(--warning)}
+.rule-item.escalation{background:#fff7ed;border-left-color:#c2410c}
+.rule-item.routing{background:#eff6ff;border-left-color:var(--primary)}
+/* === MATRIX === */
+.matrix-container{overflow-x:auto;margin-top:16px}
+.matrix-table{width:100;border-collapse:collapse;font-size:13px}
+.matrix-table th,.matrix-table td{border:1px solid var(--border);padding:8px 10px;text-align:center;vertical-align:middle}
+.matrix-table th{background:var(--surface-2);font-weight:600;font-size:12px;position:sticky;top:0}
+.matrix-table td{background:var(--surface)}
+.matrix-from{font-weight:500;font-size:12px;text-align:left;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.matrix-yes{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.matrix-no{color:#cbd5e1;font-size:16px}
+/* === SCENARIOS LIST === */
+.scenario-list{margin-top:16px}
+.scenario-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.scenario-item:hover{border-color:var(--primary)}
+.scenario-item-name{font-size:15px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.scenario-item-name .type-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.scenario-item-desc{font-size:13px;color:var(--text-2)}
+.scenario-item-meta{font-size:12px;color:var(--text-2);margin-top:6px;display:flex;gap:12px}
+/* === CONCEPT CARDS === */
+.concept-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:16px}
+.concept-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.concept-card-title{font-size:14px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.concept-card-title .card-icon{font-size:20px}
+.concept-card-desc{font-size:12px;color:var(--text-2);line-height:1.5}
+.concept-card.hub{border-left:3px solid #2563eb}
+.concept-card.handoff{border-left:3px solid #059669}
+.concept-card.guardrail{border-left:3px solid #dc2626}
+.concept-card.rule-constraint{border-left:3px solid #d97706}
+.concept-card.rule-escalation{border-left:3px solid #c2410c}
+.concept-card.rule-routing{border-left:3px solid #0891b2}
+/* === LOADING === */
+.loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#cbd5e1}
+/* === NO DATA STATE === */
+.no-data-state{text-align:center;padding:60px 20px;color:var(--text-2)}
+.no-data-state .icon{font-size:48px;margin-bottom:16px}
+.no-data-state h3{font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px}
+.no-data-state p{font-size:14px;max-width:400px;margin:0 auto 20px}
 </style>
 </head>
 <body>
-
-<!-- HEADER -->
-<header class="header">
-  <div class="header-inner">
-    <div class="header-icon">✈️</div>
-    <div>
-      <h1 data-i18n="header_title">OpenAI Airlines Agent Demo</h1>
-      <p data-i18n="header_subtitle">Hub-and-Spoke Multi-Agent Architecture with Guardrails</p>
+<div class="layout">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">🤖</span>
+      <div class="header-title">
+        <span data-i18n="siteTitle">Agent Architecture Designer</span>
+        <span data-i18n="siteSubtitle">Hub-and-Spoke Multi-Agent</span>
+      </div>
     </div>
     <div class="header-right">
-      <div class="lang-toggle">
-        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
-        <button class="lang-btn" id="lang-zh" onclick="setLang('zh')">中文</button>
-      </div>
-      <span class="header-badge">OpenAI Agents SDK</span>
-      <a href="https://github.com/openai/openai-cs-agents-demo" target="_blank" class="header-link">GitHub ↗</a>
+      <button class="lang-btn" id="lang-zh" onclick="setLocale('zh')">中文</button>
+      <button class="lang-btn" id="lang-en" onclick="setLocale('en')">EN</button>
     </div>
-  </div>
-</header>
+  </header>
 
-<!-- TABS -->
-<nav class="tabs">
-  <div class="tabs-inner">
-    <button class="tab-btn active" onclick="switchTab(0)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <span data-i18n="tab_interactive">Interactive Demo</span>
-    </button>
-    <button class="tab-btn" onclick="switchTab(1)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10A15 15 0 0112 2z"/></svg>
-      <span data-i18n="tab_architecture">Architecture</span>
-    </button>
-    <button class="tab-btn" onclick="switchTab(2)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span data-i18n="tab_agents">Agent Details</span>
-    </button>
-  </div>
-</nav>
+  <div class="main">
+    <!-- Sidebar: Agent List -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title" data-i18n="agentList">Agent 列表</div>
+        <button class="new-agent-btn" onclick="createNewAgent()">
+          <span>+</span> <span data-i18n="newAgent">新建 Agent</span>
+        </button>
+      </div>
+      <div class="agent-list" id="agent-list">
+        <div class="empty-hint" data-i18n="noAgents">暂无 Agent，点击上方按钮创建</div>
+      </div>
+      <div class="sidebar-footer">
+        <div style="font-size:12px;color:var(--text-2)" data-i18n="savedInfo">已自动保存到 data/agents.json</div>
+      </div>
+    </aside>
 
-<!-- MAIN CONTENT -->
-<div class="main">
-
-  <!-- TAB 1: INTERACTIVE DEMO -->
-  <div class="tab-content active" id="tab-0">
-    <div class="scenario-grid" id="scenario-grid"></div>
-    <div class="chat-layout" id="chat-layout" style="display:none">
-      <div class="chat-panel">
-        <div class="panel-header chat-h">
-          <h3 data-i18n="chat_title">💬 Customer Chat</h3>
-          <div class="panel-actions">
-            <button class="action-btn primary" id="btn-auto" onclick="autoPlay()" disabled data-i18n="btn_autoplay">▶ Auto Play</button>
-            <button class="action-btn" id="btn-next" onclick="nextStep()" disabled data-i18n="btn_nextstep">Next Step →</button>
-            <button class="action-btn" id="btn-reset" onclick="resetDemo()" data-i18n="btn_reset">↺ Reset</button>
+    <!-- Main Content -->
+    <main class="content" id="main-content">
+      <!-- Agent Detail View (shown when agent selected) -->
+      <div id="agent-detail" style="display:none">
+        <!-- Agent Header -->
+        <div class="agent-header">
+          <div class="agent-header-top">
+            <input class="agent-name-input" id="agent-name" data-i18n-placeholder="agentNamePlaceholder" placeholder="输入 Agent 名称..." oninput="updateAgentName(this.value)">
+            <div class="agent-header-meta">
+              <span><span data-i18n="created">创建于</span> <span id="agent-created"></span></span>
+              <span><span data-i18n="updated">更新于</span> <span id="agent-updated"></span></span>
+            </div>
+          </div>
+          <!-- Version Tabs -->
+          <div style="display:flex;align-items:center;gap:0;margin-bottom:-1px">
+            <div class="version-tabs" id="version-tabs"></div>
+            <button class="new-version-btn" onclick="createNewVersion()">+ <span data-i18n="newVersion">新建版本</span></button>
           </div>
         </div>
-        <div class="messages" id="messages"></div>
-        <div class="progress-bar">
-          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-          <div class="progress-text" id="progress-text">0 / 0</div>
+
+        <!-- Tabs -->
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="version" onclick="switchTab('version')">
+            <span data-i18n="tabVersion">版本内容</span>
+          </button>
+          <button class="tab" data-tab="demos" onclick="switchTab('demos')">
+            <span data-i18n="tabDemos">演示管理</span>
+            <span class="tab-badge" id="demo-count">0</span>
+          </button>
+          <button class="tab" data-tab="arch" onclick="switchTab('arch')">
+            <span data-i18n="tabArch">架构图</span>
+          </button>
+          <button class="tab" data-tab="detail" onclick="switchTab('detail')">
+            <span data-i18n="tabDetail">详情</span>
+          </button>
         </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="tab-content"></div>
       </div>
-      <div class="agent-panel">
-        <div class="panel-header agent-h">
-          <h3 data-i18n="agent_view_title">🤖 Agent View</h3>
-        </div>
-        <div class="agent-content" id="agent-content"></div>
+
+      <!-- Empty State (no agent selected) -->
+      <div id="empty-state" class="no-data-state">
+        <div class="icon">🎯</div>
+        <h3 data-i18n="selectAgent">请选择一个 Agent</h3>
+        <p data-i18n="selectAgentHint">从左侧列表选择一个 Agent，或点击"新建 Agent"创建一个新的 Agent</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Demo Overlay (fullscreen) -->
+<div class="demo-overlay" id="demo-overlay" style="display:none">
+  <div class="demo-header">
+    <div class="demo-header-left">
+      <button class="back-btn" onclick="exitDemo()">← <span data-i18n="back">返回</span></button>
+      <div class="demo-title">
+        <span id="demo-agent-name"></span>
+        <span id="demo-scenario-name"></span>
       </div>
     </div>
-    <div class="welcome-screen" id="welcome-screen">
-      <div class="w-icon">✈️</div>
-      <h3 data-i18n="welcome_title">Select a scenario to begin</h3>
-      <p data-i18n="welcome_desc">Choose a preset conversation to see the Agent system in action</p>
+    <select class="scenario-select" id="demo-scenario-select" onchange="switchDemoScenario(this.value)"></select>
+  </div>
+  <div class="demo-body">
+    <div class="demo-chat">
+      <div class="demo-chat-header">
+        <span data-i18n="chatPanel">聊天面板</span>
+        <span class="scenario-tag" id="demo-chat-scenario-tag"></span>
+      </div>
+      <div class="demo-messages" id="demo-messages"></div>
+    </div>
+    <div class="demo-agent" id="demo-agent-view"></div>
+  </div>
+  <div class="demo-footer">
+    <div class="demo-controls">
+      <button class="btn btn-secondary btn-sm" id="btn-reset" onclick="resetDemo()">↺ <span data-i18n="reset">重置</span></button>
+      <button class="btn btn-primary btn-sm" id="btn-prev" onclick="prevStep()">◀ <span data-i18n="prev">上一步</span></button>
+      <button class="btn btn-primary btn-sm" id="btn-next" onclick="nextStep()"><span data-i18n="next">下一步</span> ▶</button>
+      <button class="btn btn-success btn-sm" id="btn-autoplay" onclick="toggleAutoPlay()">▶ <span data-i18n="autoPlay">自动播放</span></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="demo-step-label" id="demo-step-label">Step: 0/0</div>
+      <div class="progress-bar"><div class="progress-fill" id="demo-progress" style="width:0%"></div></div>
     </div>
   </div>
+</div>
 
-  <!-- TAB 2: ARCHITECTURE -->
-  <div class="tab-content" id="tab-1">
-    <div class="arch-section">
-      <h2 data-i18n="arch_title">Hub-and-Spoke Architecture</h2>
-      <p class="arch-desc" data-i18n="arch_desc">The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.</p>
-      <div class="svg-container" id="arch-svg"></div>
+<!-- Generating Overlay -->
+<div class="generating-overlay" id="generating-overlay" style="display:none">
+  <div class="generating-card">
+    <div class="generating-title">
+      <div class="loading-spinner"></div>
+      <span data-i18n="generating">正在生成演示...</span>
     </div>
-
-    <div class="arch-section">
-      <h2 data-i18n="concepts_title">Core Concepts</h2>
-      <div class="concept-cards">
-        <div class="concept-card">
-          <div class="cc-icon" style="background:#eff6ff;color:var(--blue)">🔀</div>
-          <h3 data-i18n="concept_hub_title">Hub Mechanism</h3>
-          <p data-i18n="concept_hub_desc">The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.</p>
-        </div>
-        <div class="concept-card">
-          <div class="cc-icon" style="background:#f3e8ff;color:var(--purple)">🔄</div>
-          <h3 data-i18n="concept_handoff_title">Handoff Mechanism</h3>
-          <p data-i18n="concept_handoff_desc">Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.</p>
-        </div>
-        <div class="concept-card">
-          <div class="cc-icon" style="background:#fef2f2;color:var(--red)">🛡️</div>
-          <h3 data-i18n="concept_guardrail_title">Input Guardrails</h3>
-          <p data-i18n="concept_guardrail_desc">Two guardrails protect the system: Relevance Check ensures queries relate to airline services; Jailbreak Detection blocks attempts to override system instructions or access unauthorized capabilities.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="arch-section">
-      <h2 data-i18n="flow_title">Request Flow</h2>
-      <div class="flow-steps">
-        <div class="flow-step">
-          <div class="step-num">1</div>
-          <h4 data-i18n="flow_step1_title">User Message</h4>
-          <p data-i18n="flow_step1_desc">Customer sends a message through the chat interface</p>
-          <span class="flow-arrow">→</span>
-        </div>
-        <div class="flow-step">
-          <div class="step-num">2</div>
-          <h4 data-i18n="flow_step2_title">Guardrails Check</h4>
-          <p data-i18n="flow_step2_desc">Input is validated for relevance and safety before processing</p>
-          <span class="flow-arrow">→</span>
-        </div>
-        <div class="flow-step">
-          <div class="step-num">3</div>
-          <h4 data-i18n="flow_step3_title">Agent Processing</h4>
-          <p data-i18n="flow_step3_desc">Triage Agent routes to the appropriate specialist agent</p>
-          <span class="flow-arrow">→</span>
-        </div>
-        <div class="flow-step">
-          <div class="step-num">4</div>
-          <h4 data-i18n="flow_step4_title">Handoff / Response</h4>
-          <p data-i18n="flow_step4_desc">Agent executes tools and responds, or hands off to another agent</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="arch-section">
-      <h2 data-i18n="techstack_title">Technology Stack</h2>
-      <div class="tech-stack">
-        <div class="tech-item"><span class="tech-dot"></span>OpenAI Agents SDK</div>
-        <div class="tech-item"><span class="tech-dot"></span>FastAPI</div>
-        <div class="tech-item"><span class="tech-dot"></span>Next.js + ChatKit</div>
-        <div class="tech-item"><span class="tech-dot"></span>GPT-4o / GPT-5.2</div>
-        <div class="tech-item"><span class="tech-dot"></span>Python 3.12+</div>
-        <div class="tech-item"><span class="tech-dot"></span>TypeScript</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 3: AGENT DETAILS -->
-  <div class="tab-content" id="tab-2">
-    <div class="arch-section">
-      <h2 data-i18n="agents_overview_title">Agent Overview</h2>
-      <p class="arch-desc" data-i18n="agents_overview_desc">6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.</p>
-    </div>
-    <div class="agent-cards-grid" id="agent-cards-grid"></div>
-    <div class="agent-expanded" id="agent-expanded"></div>
-    <div class="handoff-matrix">
-      <h2 data-i18n="matrix_title">Handoff Relationship Matrix</h2>
-      <table class="matrix-table" id="matrix-table"></table>
+    <div class="generating-steps" id="generating-steps"></div>
+    <div class="generating-stream" id="generating-stream"></div>
+    <div class="generating-actions">
+      <button class="btn btn-secondary" onclick="cancelGenerating()"><span data-i18n="cancel">取消</span></button>
     </div>
   </div>
 </div>
 
 <script>
-// =============================================
-// I18N SYSTEM
-// =============================================
-let currentLang = 'en';
-
+/* =============================================
+   CONSTANTS & STATE
+   ============================================= */
 const I18N = {
-  // Header
-  header_title: { en:'OpenAI Airlines Agent Demo', zh:'OpenAI 航空 Agent 演示' },
-  header_subtitle: { en:'Hub-and-Spoke Multi-Agent Architecture with Guardrails', zh:'带护栏的 Hub-and-Spoke 多 Agent 架构' },
-  // Tabs
-  tab_interactive: { en:'Interactive Demo', zh:'交互式演示' },
-  tab_architecture: { en:'Architecture', zh:'架构图' },
-  tab_agents: { en:'Agent Details', zh:'Agent 详情' },
-  // Chat panel
-  chat_title: { en:'💬 Customer Chat', zh:'💬 客户对话' },
-  agent_view_title: { en:'🤖 Agent View', zh:'🤖 Agent 视图' },
-  btn_autoplay: { en:'▶ Auto Play', zh:'▶ 自动播放' },
-  btn_pause: { en:'⏸ Pause', zh:'⏸ 暂停' },
-  btn_nextstep: { en:'Next Step →', zh:'下一步 →' },
-  btn_reset: { en:'↺ Reset', zh:'↺ 重置' },
-  // Welcome
-  welcome_title: { en:'Select a scenario to begin', zh:'选择一个场景开始' },
-  welcome_desc: { en:'Choose a preset conversation to see the Agent system in action', zh:'选择预设对话，查看 Agent 系统的实际运行效果' },
-  // Agent panel sections
-  section_active_agent: { en:'Active Agent', zh:'当前 Agent' },
-  section_agent_routing: { en:'Agent Routing', zh:'Agent 路由' },
-  section_context: { en:'Conversation Context', zh:'对话上下文' },
-  section_guardrails: { en:'Input Guardrails', zh:'输入护栏' },
-  section_events: { en:'Runner Events', zh:'运行器事件' },
-  // Context keys
-  ctx_confirmation: { en:'Confirmation', zh:'确认号' },
-  ctx_seat: { en:'Seat', zh:'座位' },
-  ctx_destination: { en:'Destination', zh:'目的地' },
-  ctx_flight: { en:'Flight', zh:'航班号' },
-  // Guardrail names
-  gr_relevance: { en:'Relevance Check', zh:'相关性检查' },
-  gr_jailbreak: { en:'Jailbreak Detection', zh:'越狱检测' },
-  // Guardrail statuses
-  gr_passed: { en:'✓ PASSED', zh:'✓ 通过' },
-  gr_failed: { en:'✗ FAILED', zh:'✗ 失败' },
-  gr_pending: { en:'PENDING', zh:'待检测' },
-  // Agent panel placeholder
-  agent_panel_placeholder: { en:'Select a scenario to view Agent activity', zh:'选择一个场景以查看 Agent 活动' },
-  // ACTIVE badge
-  badge_active: { en:'ACTIVE', zh:'活跃' },
-  // Architecture
-  arch_title: { en:'Hub-and-Spoke Architecture', zh:'Hub-and-Spoke 架构' },
-  arch_desc: { en:'The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.', zh:'Triage Agent 作为中心枢纽，通过 Handoff 机制将客户请求路由到专业 Spoke Agent。' },
-  arch_svg_title: { en:'Hub-and-Spoke Architecture', zh:'Hub-and-Spoke 架构' },
-  arch_svg_subtitle: { en:'Triage Agent routes to specialist agents via Handoff mechanism', zh:'Triage Agent 通过 Handoff 机制路由到专业 Agent' },
-  // Concepts
-  concepts_title: { en:'Core Concepts', zh:'核心概念' },
-  concept_hub_title: { en:'Hub Mechanism', zh:'Hub 机制' },
-  concept_hub_desc: { en:'The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.', zh:'Triage Agent 作为中心枢纽，接收所有传入消息，分析意图，并路由到相应的专业 Agent。它维护对话上下文并协调 Agent 之间的 Handoff。' },
-  concept_handoff_title: { en:'Handoff Mechanism', zh:'Handoff 机制' },
-  concept_handoff_desc: { en:'Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.', zh:'Agent 可以通过结构化的 Handoff 工具将控制权转移给其他 Agent。每次 Handoff 都保留完整的对话上下文，使接收 Agent 能无缝继续交互。' },
-  concept_guardrail_title: { en:'Input Guardrails', zh:'输入护栏' },
-  concept_guardrail_desc: { en:'Two guardrails protect the system: Relevance Check ensures queries relate to airline services; Jailbreak Detection blocks attempts to override system instructions or access unauthorized capabilities.', zh:'两个护栏保护系统：相关性检查确保查询与航空服务相关；越狱检测阻止覆盖系统指令或访问未授权功能的尝试。' },
-  // Flow
-  flow_title: { en:'Request Flow', zh:'请求流程' },
-  flow_step1_title: { en:'User Message', zh:'用户消息' },
-  flow_step1_desc: { en:'Customer sends a message through the chat interface', zh:'客户通过聊天界面发送消息' },
-  flow_step2_title: { en:'Guardrails Check', zh:'护栏检查' },
-  flow_step2_desc: { en:'Input is validated for relevance and safety before processing', zh:'在处理前验证输入的相关性和安全性' },
-  flow_step3_title: { en:'Agent Processing', zh:'Agent 处理' },
-  flow_step3_desc: { en:'Triage Agent routes to the appropriate specialist agent', zh:'Triage Agent 路由到相应的专业 Agent' },
-  flow_step4_title: { en:'Handoff / Response', zh:'Handoff / 响应' },
-  flow_step4_desc: { en:'Agent executes tools and responds, or hands off to another agent', zh:'Agent 执行工具并响应，或 Handoff 给另一个 Agent' },
-  // Tech stack
-  techstack_title: { en:'Technology Stack', zh:'技术栈' },
-  // Agent details
-  agents_overview_title: { en:'Agent Overview', zh:'Agent 概览' },
-  agents_overview_desc: { en:'6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.', zh:'6 个专业 Agent 以 Hub-and-Spoke 模式协同工作，处理航空客户服务请求。' },
-  tools_label: { en:'🔧 Tools', zh:'🔧 工具' },
-  handoff_targets_label: { en:'↔️ Handoff Targets', zh:'↔️ Handoff 目标' },
-  guardrails_label: { en:'🛡️ Input Guardrails', zh:'🛡️ 输入护栏' },
-  params_prefix: { en:'params: ', zh:'参数: ' },
-  tools_count: { en:'tools', zh:'个工具' },
-  // Matrix
-  matrix_title: { en:'Handoff Relationship Matrix', zh:'Handoff 关系矩阵' },
-  matrix_from_to: { en:'From \\ To', zh:'来源 \\ 目标' },
-  matrix_legend_yes: { en:'Handoff exists', zh:'存在 Handoff 关系' },
-  matrix_legend_no: { en:'No direct handoff', zh:'无直接 Handoff' },
-  matrix_legend_self: { en:'Self (N/A)', zh:'自身 (不适用)' },
-};
-
-// Agent i18n data
-const AGENT_I18N = [
-  { name:{ en:'Triage Agent', zh:'路由 Agent' }, desc:{ en:'Central hub that routes customer requests to the appropriate specialist agent', zh:'中心枢纽，将客户请求路由到相应的专业 Agent' } },
-  { name:{ en:'Flight Information Agent', zh:'航班信息 Agent' }, desc:{ en:'Handles flight status inquiries and flight search requests', zh:'处理航班状态查询和航班搜索请求' } },
-  { name:{ en:'Booking and Cancellation Agent', zh:'预订与取消 Agent' }, desc:{ en:'Manages flight bookings, cancellations, and itinerary changes', zh:'管理航班预订、取消和行程变更' } },
-  { name:{ en:'Seat and Special Services Agent', zh:'座位与特殊服务 Agent' }, desc:{ en:'Handles seat changes, seat map display, and special service assignments', zh:'处理座位变更、座位图显示和特殊服务分配' } },
-  { name:{ en:'FAQ Agent', zh:'常见问题 Agent' }, desc:{ en:'Answers frequently asked questions about airline policies and services', zh:'回答关于航空政策和服务的常见问题' } },
-  { name:{ en:'Refunds and Compensation Agent', zh:'退款与补偿 Agent' }, desc:{ en:'Processes refund requests and issues compensation for service issues', zh:'处理退款请求和因服务问题发放补偿' } },
-];
-
-// Tool i18n
-const TOOL_I18N = {
-  get_trip_details: { desc:{ en:'Retrieve trip details using a confirmation number', zh:'使用确认号检索行程详情' } },
-  flight_status_tool: { desc:{ en:'Get the current status of a flight', zh:'获取航班当前状态' } },
-  get_matching_flights: { desc:{ en:'Search for flights matching given criteria', zh:'搜索符合条件的航班' } },
-  cancel_flight: { desc:{ en:'Cancel a confirmed flight booking', zh:'取消已确认的航班预订' } },
-  book_new_flight: { desc:{ en:'Book a new flight for the customer', zh:'为客户预订新航班' } },
-  update_seat: { desc:{ en:'Update the seat assignment for a booking', zh:'更新预订的座位分配' } },
-  assign_special_service_seat: { desc:{ en:'Assign a seat that meets special service requirements', zh:'分配满足特殊服务需求的座位' } },
-  display_seat_map: { desc:{ en:'Display the seat map for a given flight', zh:'显示指定航班的座位图' } },
-  faq_lookup_tool: { desc:{ en:'Look up answers to frequently asked questions', zh:'查找常见问题的答案' } },
-  issue_compensation: { desc:{ en:'Issue compensation to a customer for service disruptions', zh:'因服务中断向客户发放补偿' } },
-};
-
-// Scenario i18n
-const SCENARIO_I18N = [
-  {
-    title:{ en:'Seat Change', zh:'座位变更' },
-    desc:{ en:'Customer requests a window seat change for their upcoming flight', zh:'客户要求为即将到来的航班更换靠窗座位' },
-    steps:[
-      { type:'user', text:{ en:'Hi, I have a flight coming up and I would like to change my seat to a window seat.', zh:'你好，我马上有一个航班，我想把座位换成靠窗的。' } },
-      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → PASSED', zh:'相关性护栏 → 通过' }, guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', text:{ en:'Context: confirmation_number=ABC123, current_seat=12A', zh:'上下文: 确认号=ABC123, 当前座位=12A' }, context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
-      { type:'agent', agent:'Triage Agent', text:{ en:"I'd be happy to help you change your seat. Let me look up your trip details first.", zh:'很高兴为您更换座位。让我先查一下您的行程详情。' } },
-      { type:'event', eventType:'tool_call', text:{ en:'Triage Agent → get_trip_details(confirmation_number="ABC123")', zh:'路由 Agent → get_trip_details(确认号="ABC123")' } },
-      { type:'event', eventType:'tool_output', text:{ en:'Trip found: UA456 SFO→JFK, Seat 12A (aisle), Dec 15', zh:'找到行程: UA456 旧金山→纽约, 座位 12A (过道), 12月15日' } },
-      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Seat and Special Services Agent', zh:'路由 Agent → 座位与特殊服务 Agent' }, handoffTo:'seat' },
-      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:"I found your reservation. You're currently in 12A, which is an aisle seat. Let me show you the available window seats on your flight.", zh:'找到了您的预订。您目前在12A，这是一个过道座位。让我为您展示航班上可用的靠窗座位。' } },
-      { type:'event', eventType:'tool_call', text:{ en:'Seat Agent → display_seat_map(flight_number="UA456")', zh:'座位 Agent → display_seat_map(航班号="UA456")' } },
-      { type:'event', eventType:'tool_output', text:{ en:'Available window seats: 14A, 16A, 18F', zh:'可用靠窗座位: 14A, 16A, 18F' } },
-      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:'Here are the available window seats: 14A, 16A, and 18F. Which one would you prefer?', zh:'以下是可用的靠窗座位：14A、16A 和 18F。您更倾向于哪一个？' } },
-      { type:'user', text:{ en:"I'll take 14A please!", zh:'我想要14A！' } },
-      { type:'event', eventType:'tool_call', text:{ en:'Seat Agent → update_seat(confirmation_number="ABC123", new_seat="14A")', zh:'座位 Agent → update_seat(确认号="ABC123", 新座位="14A")' } },
-      { type:'event', eventType:'tool_output', text:{ en:'Seat updated successfully: 12A → 14A', zh:'座位更新成功: 12A → 14A' } },
-      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:'Your seat has been updated to 14A. Is there anything else I can help you with?', zh:'您的座位已更新为14A。还有什么我可以帮您的吗？' } },
-    ]
+  zh: {
+    siteTitle: 'Agent Architecture Designer',
+    siteSubtitle: 'Hub-and-Spoke Multi-Agent',
+    agentList: 'Agent 列表',
+    newAgent: '新建 Agent',
+    noAgents: '暂无 Agent，点击上方按钮创建',
+    savedInfo: '已自动保存到 data/agents.json',
+    selectAgent: '请选择一个 Agent',
+    selectAgentHint: '从左侧列表选择一个 Agent，或点击"新建 Agent"创建一个新的',
+    agentNamePlaceholder: '输入 Agent 名称...',
+    created: '创建于',
+    updated: '更新于',
+    newVersion: '新建版本',
+    tabVersion: '版本内容',
+    tabDemos: '演示管理',
+    tabArch: '架构图',
+    tabDetail: '详情',
+    // Form fields
+    fieldIntro: '简介',
+    fieldIntroHint: '简要描述这个 Agent 的核心定位和价值',
+    fieldScenarios: '适用场景',
+    fieldScenariosHint: '这个 Agent 适用的业务场景有哪些',
+    fieldCapabilities: '能力描述',
+    fieldCapabilitiesHint: '详细描述 Agent 的核心能力',
+    fieldConnections: '系统连接',
+    fieldConnectionsHint: 'Agent 会连接哪些外部系统',
+    fieldImpact: '业务效果',
+    fieldImpactHint: '使用这个 Agent 预期的业务效果',
+    fieldCategory: '所属板块',
+    fieldCategoryHint: '选择 Agent 所属的业务板块',
+    // Categories
+    catCustomerService: '客户服务',
+    catOperations: '运营',
+    catFinance: '财务',
+    catHR: '人力资源',
+    catIT: '技术/IT',
+    catSales: '销售/市场',
+    catOther: '其他',
+    // Buttons
+    saveVersion: '保存版本',
+    generateDemo: '✨ 生成演示版',
+    generateHint: '基于当前的描述性内容，AI 将自动生成完整的 Agent 架构演示',
+    generateNewDemo: '生成新的演示版本',
+    // Demo card
+    agents: '个 Agent',
+    scenarios: '个场景',
+    rules: '条规则',
+    playDemo: '演示',
+    viewArch: '架构',
+    viewScenarios: '场景',
+    exportDemo: '导出',
+    deleteDemo: '删除',
+    // Demo mode
+    back: '返回',
+    chatPanel: '聊天面板',
+    reset: '重置',
+    prev: '上一步',
+    next: '下一步',
+    autoPlay: '自动播放',
+    // Architecture
+    archTitle: 'Hub-and-Spoke 架构图',
+    archConcept: '概念说明',
+    hubConcept: 'Hub 机制',
+    hubConceptDesc: 'Triage Agent 作为中心枢纽，接收所有用户请求，分析意图并路由到对应的专业 Spoke Agent',
+    handoffConcept: 'Handoff 机制',
+    handoffConceptDesc: 'Spoke Agent 处理完成后，通过 Handoff 将控制权返回 Triage，实现多 Agent 协作',
+    guardrailConcept: 'Input Guardrails',
+    guardrailConceptDesc: '在用户输入进入 Agent 前进行安全检查，过滤不当内容，防止系统被滥用',
+    constraintConcept: '业务约束',
+    constraintConceptDesc: '限制 Agent 可执行的操作范围，确保业务合规性',
+    escalationConcept: '升级规则',
+    escalationConceptDesc: '当特定条件满足时（如重复失败），自动转人工客服处理',
+    routingConcept: '路由规则',
+    routingConceptDesc: '根据输入内容动态决定下一个处理的 Agent',
+    // Detail
+    detailTools: '工具列表',
+    detailHandoffs: '可转接到',
+    detailRules: '适用规则',
+    detailSteps: '步骤数',
+    // Agent types
+    triage: '主控 Agent (Triage)',
+    spoke: '子 Agent (Spoke)',
+    // Matrix
+    matrixFromTo: 'From \\ To',
+    // Scenario types
+    scenarioTypes: {
+      'seat-change': '座位变更',
+      'flight-delay': '航班延误',
+      'guardrail-trigger': '护栏触发'
+    },
+    // Generating
+    generating: '正在生成演示...',
+    generatingStep1: '正在分析业务描述...',
+    generatingStep2: '正在设计 Agent 架构...',
+    generatingStep3: '正在生成业务场景...',
+    generatingStep4: '生成完成！',
+    cancel: '取消',
+    step: '步骤',
+    contextSession: '会话ID',
+    contextTurn: '对话轮次',
+    contextIntent: '当前意图',
+    rulesStatus: '业务规则状态',
+    runnerEvents: '运行器事件',
+    rulePassed: '通过',
+    rulePending: '待检查',
+    ruleFailed: '触发'
   },
-  {
-    title:{ en:'Flight Delay', zh:'航班延误' },
-    desc:{ en:'Customer reports a delayed flight and asks for compensation options', zh:'客户报告航班延误并询问补偿方案' },
-    steps:[
-      { type:'user', text:{ en:'My flight UA789 has been delayed by 3 hours. This is really frustrating. What are my options?', zh:'我的航班UA789延误了3个小时。这太令人沮丧了。我有什么选择？' } },
-      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → PASSED', zh:'相关性护栏 → 通过' }, guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', text:{ en:'Context: flight_number=UA789, delay=3hrs', zh:'上下文: 航班号=UA789, 延误=3小时' }, context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
-      { type:'agent', agent:'Triage Agent', text:{ en:"I'm sorry to hear about the delay. Let me check your flight status right away.", zh:'很抱歉听到延误的消息。让我立即查看您的航班状态。' } },
-      { type:'event', eventType:'tool_call', text:{ en:'Triage Agent → get_trip_details(confirmation_number inferred from session)', zh:'路由 Agent → get_trip_details(从会话推断确认号)' } },
-      { type:'event', eventType:'tool_output', text:{ en:'Trip found: UA789 LAX→ORD, Delayed 3hrs, original 2:00pm → est 5:00pm', zh:'找到行程: UA789 洛杉矶→芝加哥, 延误3小时, 原定 下午2:00 → 预计 下午5:00' } },
-      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Flight Information Agent', zh:'路由 Agent → 航班信息 Agent' }, handoffTo:'flight' },
-      { type:'agent', agent:'Flight Information Agent', text:{ en:'I can confirm that UA789 from LAX to ORD has been delayed by approximately 3 hours. The new estimated departure time is 5:00 PM. Would you like me to look for alternative flights?', zh:'我可以确认UA789从洛杉矶到芝加哥延误了大约3小时。新的预计起飞时间是下午5:00。您需要我查找替代航班吗？' } },
-      { type:'user', text:{ en:"No, I'll wait. But I want to know about compensation for this delay.", zh:'不用了，我等。但我想了解这次延误的补偿。' } },
-      { type:'event', eventType:'handoff', text:{ en:'Flight Information Agent → Triage Agent', zh:'航班信息 Agent → 路由 Agent' }, handoffTo:'triage' },
-      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Refunds and Compensation Agent', zh:'路由 Agent → 退款与补偿 Agent' }, handoffTo:'refunds' },
-      { type:'agent', agent:'Refunds and Compensation Agent', text:{ en:'You may be eligible for compensation due to the significant delay. Let me process that for you.', zh:'由于严重延误，您可能有资格获得补偿。让我为您处理。' } },
-      { type:'event', eventType:'tool_call', text:{ en:'Refunds Agent → issue_compensation(confirmation_number="DEF456", amount=150.00, reason="3hr delay")', zh:'退款 Agent → issue_compensation(确认号="DEF456", 金额=150.00, 原因="延误3小时")' } },
-      { type:'event', eventType:'tool_output', text:{ en:'Compensation issued: $150.00 travel voucher, Ref# COMP-78901', zh:'补偿已发放: $150.00 旅行券, 参考号 COMP-78901' } },
-      { type:'agent', agent:'Refunds and Compensation Agent', text:{ en:"I've issued a $150.00 travel voucher as compensation for the delay. Your reference number is COMP-78901. The voucher will be sent to your email. Is there anything else I can help with?", zh:'我已发放一张$150.00的旅行券作为延误补偿。您的参考号是 COMP-78901。旅行券将发送到您的邮箱。还有什么我可以帮您的吗？' } },
-    ]
-  },
-  {
-    title:{ en:'Guardrail Trigger', zh:'护栏触发' },
-    desc:{ en:'Customer attempts an off-topic or jailbreak request that triggers guardrails', zh:'客户尝试发送无关话题或越狱请求，触发护栏' },
-    steps:[
-      { type:'user', text:{ en:'Can you help me write a Python script to hack into airline systems?', zh:'你能帮我写一个Python脚本来入侵航空系统吗？' } },
-      { type:'event', eventType:'guardrail', text:{ en:'Jailbreak Guardrail → FAILED: Detected attempt to access unauthorized system capabilities', zh:'越狱护栏 → 失败: 检测到尝试访问未授权的系统功能' }, guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFail:{name:{ en:'Jailbreak Guardrail', zh:'越狱护栏' },reason:{ en:'Detected attempt to bypass security constraints and access unauthorized system capabilities', zh:'检测到尝试绕过安全约束并访问未授权的系统功能' }} },
-      { type:'agent', agent:'Triage Agent', text:{ en:"I'm unable to assist with that request. I'm designed specifically to help with airline customer service inquiries such as flight bookings, seat changes, and travel information. Is there a travel-related matter I can help you with?", zh:'我无法协助该请求。我专门设计用于帮助处理航空客户服务查询，如航班预订、座位变更和旅行信息。有旅行相关的问题我可以帮您吗？' } },
-      { type:'user', text:{ en:"Ok fine. Can you tell me the weather in Paris? I'm flying there next week.", zh:'好吧。你能告诉我巴黎的天气吗？我下周要飞那里。' } },
-      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → FAILED: Query about weather is not directly related to airline services', zh:'相关性护栏 → 失败: 关于天气的查询与航空服务不直接相关' }, guardrails:{relevance:'fail',jailbreak:null}, guardrailFail:{name:{ en:'Relevance Guardrail', zh:'相关性护栏' },reason:{ en:'Query about weather forecasting is outside the scope of airline customer service', zh:'关于天气预报的查询超出了航空客户服务的范围' }} },
-      { type:'agent', agent:'Triage Agent', text:{ en:"I'm not able to provide weather information, but I can help you with your upcoming flight to Paris! Would you like me to look up your flight details, check your seat assignment, or answer questions about your booking?", zh:'我无法提供天气信息，但我可以帮助您处理飞往巴黎的航班！您需要我查看航班详情、检查座位分配，还是回答关于预订的问题？' } },
-    ]
+  en: {
+    siteTitle: 'Agent Architecture Designer',
+    siteSubtitle: 'Hub-and-Spoke Multi-Agent',
+    agentList: 'Agent List',
+    newAgent: 'New Agent',
+    noAgents: 'No agents yet. Click "New Agent" above to create one.',
+    savedInfo: 'Auto-saved to data/agents.json',
+    selectAgent: 'Select an Agent',
+    selectAgentHint: 'Choose an Agent from the left panel, or create a new one.',
+    agentNamePlaceholder: 'Enter Agent name...',
+    created: 'Created at',
+    updated: 'Updated at',
+    newVersion: 'New Version',
+    tabVersion: 'Version Content',
+    tabDemos: 'Demo Management',
+    tabArch: 'Architecture',
+    tabDetail: 'Details',
+    fieldIntro: 'Introduction',
+    fieldIntroHint: 'Briefly describe the core positioning and value of this Agent',
+    fieldScenarios: 'Applicable Scenarios',
+    fieldScenariosHint: 'What business scenarios does this Agent apply to',
+    fieldCapabilities: 'Capabilities',
+    fieldCapabilitiesHint: 'Describe the core capabilities in detail',
+    fieldConnections: 'System Connections',
+    fieldConnectionsHint: 'What external systems does this Agent connect to',
+    fieldImpact: 'Business Impact',
+    fieldImpactHint: 'Expected business outcomes of using this Agent',
+    fieldCategory: 'Category',
+    fieldCategoryHint: 'Select the business category',
+    catCustomerService: 'Customer Service',
+    catOperations: 'Operations',
+    catFinance: 'Finance',
+    catHR: 'Human Resources',
+    catIT: 'IT',
+    catSales: 'Sales & Marketing',
+    catOther: 'Other',
+    saveVersion: 'Save Version',
+    generateDemo: '✨ Generate Demo',
+    generateHint: 'Based on the current description, AI will generate a complete Agent architecture demo',
+    generateNewDemo: 'Generate New Demo',
+    agents: ' Agents',
+    scenarios: ' Scenarios',
+    rules: ' Rules',
+    playDemo: 'Demo',
+    viewArch: 'Architecture',
+    viewScenarios: 'Scenarios',
+    exportDemo: 'Export',
+    deleteDemo: 'Delete',
+    back: 'Back',
+    chatPanel: 'Chat Panel',
+    reset: 'Reset',
+    prev: 'Prev',
+    next: 'Next',
+    autoPlay: 'Auto Play',
+    archTitle: 'Hub-and-Spoke Architecture',
+    archConcept: 'Concept Overview',
+    hubConcept: 'Hub Mechanism',
+    hubConceptDesc: 'The Triage Agent acts as the central hub, receiving all user requests, analyzing intent, and routing to specialized Spoke Agents',
+    handoffConcept: 'Handoff Mechanism',
+    handoffConceptDesc: 'After a Spoke Agent finishes processing, it hands control back to Triage via Handoff, enabling multi-Agent collaboration',
+    guardrailConcept: 'Input Guardrails',
+    guardrailConceptDesc: 'Security checks on user input before it enters the Agent, filtering inappropriate content and preventing misuse',
+    constraintConcept: 'Business Constraints',
+    constraintConceptDesc: 'Limits the scope of actions the Agent can perform, ensuring business compliance',
+    escalationConcept: 'Escalation Rules',
+    escalationConceptDesc: 'When specific conditions are met (e.g., repeated failures), automatically transfers to human customer service',
+    routingConcept: 'Routing Rules',
+    routingConceptDesc: 'Dynamically determines the next Agent to handle based on input content',
+    detailTools: 'Tools',
+    detailHandoffs: 'Handoffs To',
+    detailRules: 'Applied Rules',
+    detailSteps: 'Steps',
+    triage: 'Triage Agent',
+    spoke: 'Spoke Agent',
+    matrixFromTo: 'From \\ To',
+    scenarioTypes: {
+      'seat-change': 'Seat Change',
+      'flight-delay': 'Flight Delay',
+      'guardrail-trigger': 'Guardrail Trigger'
+    },
+    generating: 'Generating Demo...',
+    generatingStep1: 'Analyzing business description...',
+    generatingStep2: 'Designing Agent architecture...',
+    generatingStep3: 'Generating business scenarios...',
+    generatingStep4: 'Generation complete!',
+    cancel: 'Cancel',
+    step: 'Step',
+    contextSession: 'Session ID',
+    contextTurn: 'Turn',
+    contextIntent: 'Current Intent',
+    rulesStatus: 'Business Rules',
+    runnerEvents: 'Runner Events',
+    rulePassed: 'PASSED',
+    rulePending: 'PENDING',
+    ruleFailed: 'FAILED'
   }
-];
-
-// Guardrail i18n in agent details
-const GUARDRAIL_DETAIL_I18N = {
-  'Relevance Guardrail': { desc:{ en:'Ensures messages are relevant to airline customer service topics', zh:'确保消息与航空客户服务主题相关' } },
-  'Jailbreak Guardrail': { desc:{ en:'Detects and blocks attempts to bypass or override system instructions', zh:'检测并阻止绕过或覆盖系统指令的尝试' } },
 };
 
+/* =============================================
+   APP STATE
+   ============================================= */
+let locale = 'zh';
+let agents = [];
+let currentAgentId = null;
+let currentVersion = null;
+let currentDemoIndex = 0;
+let currentTab = 'version';
+let autoPlayTimer = null;
+let autoPlaying = false;
+// Demo playback state
+let demoState = {
+  agentId: null,
+  version: null,
+  demoIndex: 0,
+  scenarioIndex: 0,
+  step: 0
+};
+
+const CATEGORIES = ['catCustomerService', 'catOperations', 'catFinance', 'catHR', 'catIT', 'catSales', 'catOther'];
+const CATEGORY_COLORS = {
+  catCustomerService: '#2563eb',
+  catOperations: '#059669',
+  catFinance: '#7c3aed',
+  catHR: '#dc2626',
+  catIT: '#d97706',
+  catSales: '#0891b2',
+  catOther: '#64748b'
+};
+
+/* =============================================
+   UTILITY FUNCTIONS
+   ============================================= */
 function t(key) {
-  const entry = I18N[key];
-  if (!entry) return key;
-  return entry[currentLang] || entry['en'] || key;
+  const val = I18N[locale][key];
+  if (val === undefined) return key;
+  return typeof val === 'object' ? val : val;
 }
 
-function getAgentName(idx) {
-  return AGENT_I18N[idx].name[currentLang];
+function getCurrentAgent() {
+  return agents.find(a => a.id === currentAgentId);
 }
 
-function getAgentDesc(idx) {
-  return AGENT_I18N[idx].desc[currentLang];
+function getCurrentAgentVersion() {
+  const agent = getCurrentAgent();
+  if (!agent || !currentVersion) return null;
+  return agent.versions.find(v => v.version === currentVersion);
 }
 
-function getScenarioTitle(idx) {
-  return SCENARIO_I18N[idx].title[currentLang];
+function getCurrentDemo() {
+  const ver = getCurrentAgentVersion();
+  if (!ver || ver.demos.length === 0) return null;
+  return ver.demos[currentDemoIndex] || null;
 }
 
-function getScenarioDesc(idx) {
-  return SCENARIO_I18N[idx].desc[currentLang];
+function generateId() {
+  return 'agent-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
 }
 
-function getStepText(scenarioIdx, stepIdx) {
-  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
-  if (typeof step.text === 'object') return step.text[currentLang] || step.text['en'];
-  return step.text;
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function getGuardrailFailName(scenarioIdx, stepIdx) {
-  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
-  if (step.guardrailFail && typeof step.guardrailFail.name === 'object') {
-    return step.guardrailFail.name[currentLang] || step.guardrailFail.name['en'];
-  }
-  return step.guardrailFail ? step.guardrailFail.name : '';
+function saveAgents() {
+  // In browser, we'd save to localStorage; in static mode, just keep in memory
+  try {
+    localStorage.setItem('agent_designer_data', JSON.stringify(agents));
+  } catch(e) {}
 }
 
-function getGuardrailFailReason(scenarioIdx, stepIdx) {
-  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
-  if (step.guardrailFail && typeof step.guardrailFail.reason === 'object') {
-    return step.guardrailFail.reason[currentLang] || step.guardrailFail.reason['en'];
-  }
-  return step.guardrailFail ? step.guardrailFail.reason : '';
+function loadAgents() {
+  return fetch('./data/agents.json')
+    .then(r => r.json())
+    .catch(() => ({ agents: [] }));
 }
 
-function setLang(lang) {
-  currentLang = lang;
-  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-  document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
-  document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
-
-  // Update all data-i18n elements
+/* =============================================
+   I18N
+   ============================================= */
+function setLocale(l) {
+  locale = l;
+  document.documentElement.lang = l;
+  document.getElementById('lang-zh').classList.toggle('active', l === 'zh');
+  document.getElementById('lang-en').classList.toggle('active', l === 'en');
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    const val = t(key);
-    if (val) el.textContent = val;
+    const val = I18N[l][key];
+    if (val !== undefined) el.textContent = val;
   });
-
-  // Re-render dynamic content
-  initScenarioGrid();
-  updateAgentPanel();
-  renderArchitectureSVG();
-  renderAgentCards();
-  renderHandoffMatrix();
-
-  // Re-render agent expanded if open
-  if (selectedAgentIdx >= 0) {
-    toggleAgent(selectedAgentIdx);
-    toggleAgent(selectedAgentIdx);
-  }
-
-  // Re-render chat messages if scenario is active
-  if (selectedScenario) {
-    const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
-    rerenderChatMessages(sIdx);
-
-    // Update button texts
-    const autoBtn = document.getElementById('btn-auto');
-    if (isAutoPlaying) {
-      autoBtn.textContent = t('btn_pause');
-    } else {
-      autoBtn.textContent = t('btn_autoplay');
-    }
-    document.getElementById('btn-next').textContent = t('btn_nextstep');
-    document.getElementById('btn-reset').textContent = t('btn_reset');
-  }
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = I18N[l][key];
+    if (val !== undefined) el.placeholder = val;
+  });
+  if (currentAgentId) renderAgentDetail();
 }
 
-// =============================================
-// DATA DEFINITIONS (language-agnostic structure)
-// =============================================
-
-const AGENTS = [
-  { id:'triage', icon:'🔀', color:'#2563eb', tools:['get_trip_details'], handoffIds:['flight','booking','seat','faq','refunds'], guardrailKeys:['Relevance Guardrail','Jailbreak Guardrail'] },
-  { id:'flight', icon:'✈️', color:'#059669', tools:['flight_status_tool','get_matching_flights'], handoffIds:['triage'], guardrailKeys:[] },
-  { id:'booking', icon:'🎫', color:'#7c3aed', tools:['cancel_flight','get_matching_flights','book_new_flight'], handoffIds:['triage'], guardrailKeys:[] },
-  { id:'seat', icon:'💺', color:'#dc2626', tools:['update_seat','assign_special_service_seat','display_seat_map'], handoffIds:['triage'], guardrailKeys:[] },
-  { id:'faq', icon:'❓', color:'#d97706', tools:['faq_lookup_tool'], handoffIds:['triage'], guardrailKeys:[] },
-  { id:'refunds', icon:'💰', color:'#0891b2', tools:['issue_compensation','faq_lookup_tool'], handoffIds:['triage'], guardrailKeys:[] },
-];
-
-const TOOL_DETAILS = {
-  get_trip_details: { params:'confirmation_number: str' },
-  flight_status_tool: { params:'flight_number: str' },
-  get_matching_flights: { params:'origin: str, destination: str, date: str' },
-  cancel_flight: { params:'confirmation_number: str, reason: str' },
-  book_new_flight: { params:'origin: str, destination: str, date: str, passenger_name: str' },
-  update_seat: { params:'confirmation_number: str, new_seat: str' },
-  assign_special_service_seat: { params:'confirmation_number: str, service_type: str' },
-  display_seat_map: { params:'flight_number: str' },
-  faq_lookup_tool: { params:'query: str' },
-  issue_compensation: { params:'confirmation_number: str, amount: float, reason: str' },
-};
-
-const SCENARIOS = [
-  {
-    id:'seat-change', icon:'💺', color:'blue',
-    steps:[
-      { type:'user' },
-      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
-      { type:'agent', agentId:'triage' },
-      { type:'event', eventType:'tool_call' },
-      { type:'event', eventType:'tool_output' },
-      { type:'event', eventType:'handoff', handoffTo:'seat' },
-      { type:'agent', agentId:'seat' },
-      { type:'event', eventType:'tool_call' },
-      { type:'event', eventType:'tool_output' },
-      { type:'agent', agentId:'seat' },
-      { type:'user' },
-      { type:'event', eventType:'tool_call' },
-      { type:'event', eventType:'tool_output' },
-      { type:'agent', agentId:'seat' },
-    ]
-  },
-  {
-    id:'flight-delay', icon:'✈️', color:'green',
-    steps:[
-      { type:'user' },
-      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
-      { type:'agent', agentId:'triage' },
-      { type:'event', eventType:'tool_call' },
-      { type:'event', eventType:'tool_output' },
-      { type:'event', eventType:'handoff', handoffTo:'flight' },
-      { type:'agent', agentId:'flight' },
-      { type:'user' },
-      { type:'event', eventType:'handoff', handoffTo:'triage' },
-      { type:'event', eventType:'handoff', handoffTo:'refunds' },
-      { type:'agent', agentId:'refunds' },
-      { type:'event', eventType:'tool_call' },
-      { type:'event', eventType:'tool_output' },
-      { type:'agent', agentId:'refunds' },
-    ]
-  },
-  {
-    id:'guardrail-trigger', icon:'🛡️', color:'red',
-    steps:[
-      { type:'user' },
-      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFailIdx:0 },
-      { type:'agent', agentId:'triage' },
-      { type:'user' },
-      { type:'event', eventType:'guardrail', guardrails:{relevance:'fail',jailbreak:null}, guardrailFailIdx:1 },
-      { type:'agent', agentId:'triage' },
-    ]
+/* =============================================
+   AGENT LIST
+   ============================================= */
+function renderAgentList() {
+  const container = document.getElementById('agent-list');
+  if (agents.length === 0) {
+    container.innerHTML = `<div class="empty-hint">${t('noAgents')}</div>`;
+    return;
   }
-];
-
-// =============================================
-// STATE
-// =============================================
-let currentTab = 0;
-let selectedScenario = null;
-let selectedScenarioIdx = -1;
-let currentStep = 0;
-let autoPlayTimer = null;
-let isAutoPlaying = false;
-
-// =============================================
-// TAB SWITCHING
-// =============================================
-function switchTab(idx) {
-  currentTab = idx;
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
-  document.querySelectorAll('.tab-content').forEach((c,i) => c.classList.toggle('active', i===idx));
+  container.innerHTML = agents.map(a => {
+    const isActive = a.id === currentAgentId;
+    const latestVer = a.versions && a.versions.length > 0 ? a.versions[a.versions.length - 1] : null;
+    const category = latestVer ? latestVer.description.category : '';
+    const catKey = CATEGORIES.find(c => t(c) === category) || 'catOther';
+    const catColor = CATEGORY_COLORS[catKey];
+    return `
+      <div class="agent-item ${isActive ? 'active' : ''}" onclick="selectAgent('${a.id}')">
+        <span class="agent-item-icon">🤖</span>
+        <span class="agent-item-name">${escHtml(a.name)}</span>
+        <span class="agent-item-category" style="background:${catColor}22;color:${catColor}">${escHtml(category || '其他')}</span>
+        <button class="agent-item-delete" onclick="event.stopPropagation();deleteAgent('${a.id}')" title="删除">×</button>
+      </div>
+    `;
+  }).join('');
 }
 
-// =============================================
-// TAB 1: INTERACTIVE DEMO
-// =============================================
-function initScenarioGrid() {
-  const grid = document.getElementById('scenario-grid');
-  grid.innerHTML = SCENARIOS.map((s, i) => `
-    <div class="scenario-card${selectedScenarioIdx === i ? ' selected' : ''}" data-color="${s.color}" onclick="selectScenario(${i})">
-      <div class="s-icon">${s.icon}</div>
-      <div class="s-title">${getScenarioTitle(i)}</div>
-      <div class="s-desc">${getScenarioDesc(i)}</div>
-    </div>
+function selectAgent(id) {
+  currentAgentId = id;
+  const agent = getCurrentAgent();
+  if (agent && agent.versions.length > 0) {
+    currentVersion = agent.versions[agent.versions.length - 1].version;
+  } else {
+    currentVersion = null;
+  }
+  renderAgentList();
+  renderAgentDetail();
+}
+
+function createNewAgent() {
+  const name = locale === 'zh' ? '新 Agent' : 'New Agent';
+  const newAgent = {
+    id: generateId(),
+    name: name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    currentVersion: 'v1.0',
+    versions: [{
+      version: 'v1.0',
+      createdAt: new Date().toISOString(),
+      description: {
+        intro: '',
+        applicableScenarios: '',
+        capabilities: '',
+        systemConnections: '',
+        businessImpact: '',
+        category: locale === 'zh' ? '客户服务' : 'Customer Service'
+      },
+      demos: []
+    }]
+  };
+  agents.push(newAgent);
+  saveAgents();
+  currentAgentId = newAgent.id;
+  currentVersion = 'v1.0';
+  renderAgentList();
+  renderAgentDetail();
+}
+
+function deleteAgent(id) {
+  if (!confirm(locale === 'zh' ? '确定删除此 Agent？' : 'Are you sure you want to delete this Agent?')) return;
+  agents = agents.filter(a => a.id !== id);
+  saveAgents();
+  if (currentAgentId === id) {
+    currentAgentId = agents.length > 0 ? agents[agents.length - 1].id : null;
+    currentVersion = currentAgentId ? getCurrentAgent().versions[getCurrentAgent().versions.length - 1].version : null;
+  }
+  renderAgentList();
+  if (currentAgentId) renderAgentDetail();
+  else document.getElementById('agent-detail').style.display = 'none';
+}
+
+function updateAgentName(name) {
+  const agent = getCurrentAgent();
+  if (!agent) return;
+  agent.name = name;
+  agent.updatedAt = new Date().toISOString();
+  saveAgents();
+  renderAgentList();
+}
+
+/* =============================================
+   VERSION MANAGEMENT
+   ============================================= */
+function renderVersionTabs() {
+  const agent = getCurrentAgent();
+  if (!agent) return;
+  const container = document.getElementById('version-tabs');
+  container.innerHTML = agent.versions.map(v => `
+    <button class="version-tab ${v.version === currentVersion ? 'active' : ''}" onclick="switchVersion('${v.version}')">
+      ${v.version}
+    </button>
   `).join('');
 }
 
-function selectScenario(idx) {
-  stopAutoPlay();
-  selectedScenario = SCENARIOS[idx];
-  selectedScenarioIdx = idx;
-  currentStep = 0;
-
-  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
-  document.querySelectorAll('.scenario-card')[idx].classList.add('selected');
-
-  document.getElementById('chat-layout').style.display = 'flex';
-  document.getElementById('welcome-screen').style.display = 'none';
-  document.getElementById('btn-auto').disabled = false;
-  document.getElementById('btn-next').disabled = false;
-
-  resetMessages();
-  updateAgentPanel();
-  updateProgress();
+function switchVersion(v) {
+  currentVersion = v;
+  renderVersionTabs();
+  renderAgentDetail();
 }
 
-function resetMessages() {
-  document.getElementById('messages').innerHTML = '';
+function createNewVersion() {
+  const agent = getCurrentAgent();
+  if (!agent) return;
+  // Copy latest version as new
+  const latest = agent.versions[agent.versions.length - 1];
+  const parts = latest.version.split('.');
+  parts[1] = String(parseInt(parts[1] || 0) + 1);
+  const newVersion = parts.join('.');
+  agent.versions.push({
+    version: newVersion,
+    createdAt: new Date().toISOString(),
+    description: JSON.parse(JSON.stringify(latest.description)),
+    demos: [] // new version starts with no demos
+  });
+  agent.updatedAt = new Date().toISOString();
+  currentVersion = newVersion;
+  saveAgents();
+  renderVersionTabs();
+  renderAgentDetail();
 }
 
-function resetDemo() {
-  stopAutoPlay();
-  currentStep = 0;
-  if (selectedScenario) {
-    resetMessages();
-    updateAgentPanel();
-    updateProgress();
+/* =============================================
+   TAB SYSTEM
+   ============================================= */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const container = document.getElementById('tab-content');
+  if (currentTab === 'version') renderVersionTab(container);
+  else if (currentTab === 'demos') renderDemosTab(container);
+  else if (currentTab === 'arch') renderArchTab(container);
+  else if (currentTab === 'detail') renderDetailTab(container);
+}
+
+function renderAgentDetail() {
+  const agent = getCurrentAgent();
+  const detail = document.getElementById('agent-detail');
+  const empty = document.getElementById('empty-state');
+  if (!agent) {
+    detail.style.display = 'none';
+    empty.style.display = 'flex';
+    return;
   }
+  detail.style.display = 'flex';
+  detail.style.flexDirection = 'column';
+  empty.style.display = 'none';
+  document.getElementById('agent-name').value = agent.name;
+  document.getElementById('agent-created').textContent = formatDate(agent.createdAt);
+  document.getElementById('agent-updated').textContent = formatDate(agent.updatedAt);
+  renderVersionTabs();
+  const ver = getCurrentAgentVersion();
+  document.getElementById('demo-count').textContent = ver ? ver.demos.length : 0;
+  renderTabContent();
 }
 
-function rerenderChatMessages(sIdx) {
-  const msgs = document.getElementById('messages');
-  msgs.innerHTML = '';
-  for (let i = 0; i < currentStep; i++) {
-    const step = SCENARIOS[sIdx].steps[i];
-    const stepI18n = SCENARIO_I18N[sIdx].steps[i];
-    if (step.type === 'user') {
-      addMessageDirect('user', stepI18n.text[currentLang]);
-    } else if (step.type === 'agent') {
-      const agentIdx = AGENTS.findIndex(a => a.id === step.agentId);
-      addMessageDirect('agent', stepI18n.text[currentLang], getAgentName(agentIdx), AGENTS[agentIdx].color);
+/* =============================================
+   VERSION TAB (描述性内容)
+   ============================================= */
+function renderVersionTab(container) {
+  const ver = getCurrentAgentVersion();
+  const desc = ver ? ver.description : { intro: '', applicableScenarios: '', capabilities: '', systemConnections: '', businessImpact: '', category: '' };
+  const cats = CATEGORIES.map(c => `<option value="${t(c)}" ${desc.category === t(c) ? 'selected' : ''}>${t(c)}</option>`).join('');
+  container.innerHTML = `
+    <div style="max-width:700px">
+      <div class="form-section">
+        <div class="form-section-title">📝 <span data-i18n="tabVersion">${t('tabVersion')}</span></div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldIntro')}</label>
+          <textarea class="form-textarea" rows="3" data-field="intro" oninput="updateDescription(this.dataset.field, this.value)">${escHtml(desc.intro)}</textarea>
+          <div class="form-hint">${t('fieldIntroHint')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldScenarios')}</label>
+          <textarea class="form-textarea" rows="3" data-field="applicableScenarios" oninput="updateDescription(this.dataset.field, this.value)">${escHtml(desc.applicableScenarios)}</textarea>
+          <div class="form-hint">${t('fieldScenariosHint')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldCapabilities')}</label>
+          <textarea class="form-textarea" rows="4" data-field="capabilities" oninput="updateDescription(this.dataset.field, this.value)">${escHtml(desc.capabilities)}</textarea>
+          <div class="form-hint">${t('fieldCapabilitiesHint')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldConnections')}</label>
+          <textarea class="form-textarea" rows="3" data-field="systemConnections" oninput="updateDescription(this.dataset.field, this.value)">${escHtml(desc.systemConnections)}</textarea>
+          <div class="form-hint">${t('fieldConnectionsHint')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldImpact')}</label>
+          <textarea class="form-textarea" rows="3" data-field="businessImpact" oninput="updateDescription(this.dataset.field, this.value)">${escHtml(desc.businessImpact)}</textarea>
+          <div class="form-hint">${t('fieldImpactHint')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('fieldCategory')}</label>
+          <select class="form-select" data-field="category" onchange="updateDescription(this.dataset.field, this.value)">
+            <option value="">--</option>
+            ${cats}
+          </select>
+          <div class="form-hint">${t('fieldCategoryHint')}</div>
+        </div>
+      </div>
+
+      <div class="generate-section">
+        <h3>✨ <span data-i18n="generateDemo">${t('generateDemo')}</span></h3>
+        <p data-i18n="generateHint">${t('generateHint')}</p>
+        <button class="generate-btn" onclick="generateDemo()">
+          🤖 <span>${t('generateDemo')}</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function updateDescription(field, value) {
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  ver.description[field] = value;
+  const agent = getCurrentAgent();
+  agent.updatedAt = new Date().toISOString();
+  saveAgents();
+}
+
+/* =============================================
+   DEMOS TAB
+   ============================================= */
+function renderDemosTab(container) {
+  const ver = getCurrentAgentVersion();
+  const demos = ver ? ver.demos : [];
+  const arch = demos[currentDemoIndex] ? demos[currentDemoIndex].architecture : null;
+  const hasArch = arch !== null;
+  container.innerHTML = `
+    <div style="max-width:800px">
+      <div class="demo-list">
+        ${demos.length === 0 ? `
+          <div class="no-data-state" style="padding:40px">
+            <div class="icon">📋</div>
+            <h3>${locale === 'zh' ? '暂无演示版本' : 'No Demo Versions'}</h3>
+            <p>${t('generateHint')}</p>
+          </div>
+        ` : demos.map((demo, i) => {
+          const agentCount = demo.architecture ? (1 + (demo.architecture.spokeAgents ? demo.architecture.spokeAgents.length : 0)) : 0;
+          const scenarioCount = demo.scenarios ? demo.scenarios.length : 0;
+          const ruleCount = demo.architecture && demo.architecture.businessRules ? demo.architecture.businessRules.length : 0;
+          return `
+            <div class="demo-card ${i === currentDemoIndex ? 'active' : ''}" onclick="selectDemo(${i})">
+              <div class="demo-card-header">
+                <div class="demo-card-version">
+                  Demo ${demo.version}
+                  ${i === currentDemoIndex ? '<span class="version-badge">✓</span>' : ''}
+                </div>
+                <div class="demo-card-time">${formatDate(demo.createdAt)}</div>
+              </div>
+              <div class="demo-card-summary">
+                <span>🤖 ${agentCount} ${t('agents')}</span>
+                <span>💬 ${scenarioCount} ${t('scenarios')}</span>
+                <span>🛡️ ${ruleCount} ${t('rules')}</span>
+              </div>
+              <div class="demo-card-actions">
+                <button class="btn btn-success btn-sm" onclick="event.stopPropagation();startDemo(${i})">▶ ${t('playDemo')}</button>
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();exportDemo(${i})">📄 ${t('exportDemo')}</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteDemo(${i})">🗑 ${t('deleteDemo')}</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function selectDemo(i) {
+  currentDemoIndex = i;
+  renderDemosTab(document.getElementById('tab-content'));
+}
+
+function deleteDemo(i) {
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  ver.demos.splice(i, 1);
+  if (currentDemoIndex >= ver.demos.length) currentDemoIndex = Math.max(0, ver.demos.length - 1);
+  saveAgents();
+  document.getElementById('demo-count').textContent = ver.demos.length;
+  renderDemosTab(document.getElementById('tab-content'));
+}
+
+function exportDemo(i) {
+  const ver = getCurrentAgentVersion();
+  if (!ver || !ver.demos[i]) return;
+  const data = JSON.stringify(ver.demos[i], null, 2);
+  downloadFile(`agent-demo-${ver.demos[i].version}.json`, data, 'application/json');
+}
+
+/* =============================================
+   GENERATE DEMO (mock for static version)
+   ============================================= */
+function generateDemo() {
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  showGeneratingOverlay();
+  // Simulate LLM generation with mock data based on description
+  const steps = [t('generatingStep1'), t('generatingStep2'), t('generatingStep3'), t('generatingStep4')];
+  let stepIdx = 0;
+  const stream = document.getElementById('generating-stream');
+  const stepLabel = document.getElementById('generating-steps');
+  function nextStep() {
+    if (stepIdx < steps.length) {
+      stepLabel.textContent = steps[stepIdx];
+      stream.innerHTML += `<div class="thinking">▸ ${steps[stepIdx]}</div>`;
+      stream.scrollTop = stream.scrollHeight;
+      stepIdx++;
+      setTimeout(nextStep, 800 + Math.random() * 600);
+    } else {
+      stream.innerHTML += `<div class="done">✓ ${t('generatingStep4')}</div>`;
+      stream.scrollTop = stream.scrollHeight;
+      setTimeout(() => {
+        hideGeneratingOverlay();
+        // Create new demo version using the airline data as template
+        const demoVerNum = ver.demos.length + 1;
+        // Use a simplified mock based on agent description
+        const mockDemo = generateMockDemo(demoVerNum, ver.description);
+        ver.demos.push(mockDemo);
+        currentDemoIndex = ver.demos.length - 1;
+        saveAgents();
+        document.getElementById('demo-count').textContent = ver.demos.length;
+        switchTab('demos');
+      }, 500);
     }
   }
-  msgs.scrollTop = msgs.scrollHeight;
+  nextStep();
 }
 
-function addMessageDirect(type, text, agentName, agentColor) {
-  const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'msg ' + (type === 'user' ? 'user' : 'agent');
+function generateMockDemo(versionNum, desc) {
+  // Generate a mock demo based on the description
+  const triageName = desc.intro ? desc.intro.substring(0, 30).split(' ')[0] + ' Triage' : 'Triage Agent';
+  const demoVersion = 'v' + versionNum;
+  const now = new Date().toISOString();
+  // Determine number of spoke agents based on capabilities text
+  const capCount = desc.capabilities ? desc.capabilities.split(/\n/).filter(l => l.trim()).length : 3;
+  const spokeCount = Math.min(Math.max(capCount, 3), 6);
+  const spokeAgents = [
+    { id: 'spoke-1', name: 'Information Agent', description: '处理信息查询', icon: '📋', color: '#059669', tools: [{name:'query_info',description:'查询信息'}], handoffs: [{agentId:'triage',label:'返回'}], guardrails: [] },
+    { id: 'spoke-2', name: 'Processing Agent', description: '处理业务操作', icon: '⚙️', color: '#7c3aed', tools: [{name:'process_request',description:'处理请求'}], handoffs: [{agentId:'triage',label:'返回'}], guardrails: [] },
+    { id: 'spoke-3', name: 'Support Agent', description: '提供支持服务', icon: '💬', color: '#d97706', tools: [{name:'provide_support',description:'提供支持'}], handoffs: [{agentId:'triage',label:'返回'}], guardrails: [] }
+  ].slice(0, spokeCount);
+  return {
+    version: demoVersion,
+    createdAt: now,
+    architecture: {
+      schemaVersion: '1.0',
+      triageAgent: {
+        id: 'triage',
+        name: triageName,
+        description: '主控路由器，分析用户意图并路由到对应专业 Agent',
+        icon: '🔀',
+        color: '#2563eb',
+        tools: [{name:'route_request',description:'路由请求'}],
+        handoffs: spokeAgents.map(s => ({agentId: s.id, label: s.name})),
+        guardrails: []
+      },
+      spokeAgents: spokeAgents,
+      businessRules: [
+        {id:'rule-1', name:'输入安全检查', type:'guardrail', description:'检查输入安全性', appliesTo:['triage'], triggerExample:'包含敏感词'},
+        {id:'rule-2', name:'业务约束', type:'constraint', description:'限制操作范围', appliesTo:spokeAgents.map(s=>s.id), triggerExample:'超出范围'},
+        {id:'rule-3', name:'升级规则', type:'escalation', description:'失败时升级', appliesTo:spokeAgents.map(s=>s.id), triggerExample:'重复失败'}
+      ],
+      handoffMatrix: {
+        from_to: {
+          'triage': spokeAgents.map(s => s.id),
+          ...Object.fromEntries(spokeAgents.map(s => [s.id, ['triage']]))
+        }
+      }
+    },
+    scenarios: [
+      {
+        name: locale === 'zh' ? '标准业务流程' : 'Standard Flow',
+        nameEn: 'Standard Flow',
+        description: locale === 'zh' ? '典型的业务处理流程' : 'A typical business process',
+        type: 'standard',
+        steps: [
+          {type:'customer', content: locale === 'zh' ? '你好，我想咨询一下' : 'Hello, I would like to inquire', agent:'customer'},
+          {type:'agent', content: locale === 'zh' ? '您好，请问有什么可以帮助您？' : 'Hello, how can I help you today?', agent:'triage'},
+          {type:'handoff', content: locale === 'zh' ? '正在转接至专业客服...' : 'Transferring to specialist...', agent:'triage', targetAgent:'spoke-1'},
+          {type:'agent', content: locale === 'zh' ? '已为您转接，请稍候' : 'You have been transferred. Please hold.', agent:'spoke-1'},
+          {type:'tool_call', content: locale === 'zh' ? '正在查询信息...' : 'Querying information...', agent:'spoke-1', toolName:'query_info'},
+          {type:'agent', content: locale === 'zh' ? '根据查询结果，为您解答如下...' : 'Based on the results, here is the answer...', agent:'spoke-1'},
+          {type:'handoff', content: locale === 'zh' ? '业务处理完成，返回主路由' : 'Processing complete, returning to main router', agent:'spoke-1', targetAgent:'triage'},
+          {type:'agent', content: locale === 'zh' ? '感谢您的咨询，祝您生活愉快！' : 'Thank you for your inquiry. Have a great day!', agent:'triage'}
+        ]
+      }
+    ]
+  };
+}
+
+function showGeneratingOverlay() {
+  document.getElementById('generating-overlay').style.display = 'flex';
+  document.getElementById('generating-stream').innerHTML = '';
+  document.getElementById('generating-steps').textContent = '';
+}
+
+function hideGeneratingOverlay() {
+  document.getElementById('generating-overlay').style.display = 'none';
+}
+
+function cancelGenerating() {
+  hideGeneratingOverlay();
+}
+
+/* =============================================
+   DEMO PLAYBACK
+   ============================================= */
+function startDemo(demoIndex) {
+  const ver = getCurrentAgentVersion();
+  if (!ver || !ver.demos[demoIndex]) return;
+  currentDemoIndex = demoIndex;
+  const demo = ver.demos[demoIndex];
+  const agent = getCurrentAgent();
+  demoState = {
+    agentId: agent.id,
+    version: ver.version,
+    demoIndex: demoIndex,
+    scenarioIndex: 0,
+    step: 0
+  };
+  // Setup scenario selector
+  const sel = document.getElementById('demo-scenario-select');
+  sel.innerHTML = demo.scenarios.map((s, i) => `<option value="${i}">${s.name || s.nameEn}</option>`).join('');
+  document.getElementById('demo-agent-name').textContent = agent.name;
+  document.getElementById('demo-scenario-name').textContent = `- Demo ${demo.version}`;
+  switchDemoScenario(0);
+  document.getElementById('demo-overlay').style.display = 'flex';
+}
+
+function switchDemoScenario(idx) {
+  demoState.scenarioIndex = parseInt(idx);
+  demoState.step = 0;
+  autoPlaying = false;
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+  renderDemoStep();
+}
+
+function renderDemoStep() {
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  const demo = ver.demos[demoState.demoIndex];
+  if (!demo) return;
+  const scenario = demo.scenarios[demoState.scenarioIndex];
+  if (!scenario) return;
+  const steps = scenario.steps || [];
+  const step = demoState.step;
+  // Update scenario tag
+  document.getElementById('demo-chat-scenario-tag').textContent = scenario.name || scenario.nameEn || '';
+  // Render messages up to current step
+  const messagesEl = document.getElementById('demo-messages');
   let html = '';
-  if (type === 'agent') {
-    html += `<div class="agent-label"><span class="agent-dot" style="background:${agentColor}"></span><span class="agent-name">${agentName}</span></div>`;
+  for (let i = 0; i <= step && i < steps.length; i++) {
+    const s = steps[i];
+    html += renderMessage(s, i);
   }
-  html += `<div class="msg-bubble">${text}</div>`;
-  div.innerHTML = html;
-  msgs.appendChild(div);
-}
-
-function addMessage(type, text, agentName, agentColor) {
-  const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'msg ' + (type === 'user' ? 'user' : 'agent');
-  let html = '';
-  if (type === 'agent') {
-    html += `<div class="agent-label"><span class="agent-dot" style="background:${agentColor}"></span><span class="agent-name">${agentName}</span></div>`;
+  messagesEl.innerHTML = html;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  // Update right panel
+  renderDemoAgentView(demo, step, scenario);
+  // Update progress
+  const total = steps.length;
+  document.getElementById('demo-step-label').textContent = `${t('step')}: ${step + 1}/${total}`;
+  document.getElementById('demo-progress').style.width = total > 0 ? ((step + 1) / total * 100) + '%' : '0%';
+  // Update buttons
+  document.getElementById('btn-prev').disabled = step === 0;
+  document.getElementById('btn-next').disabled = step >= total - 1;
+  // Update autoplay button
+  const autoBtn = document.getElementById('btn-autoplay');
+  if (autoPlaying) {
+    autoBtn.textContent = '⏸ ' + (locale === 'zh' ? '暂停' : 'Pause');
+  } else {
+    autoBtn.textContent = '▶ ' + t('autoPlay');
   }
-  html += `<div class="msg-bubble">${text}</div>`;
-  div.innerHTML = html;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
 }
 
-function addTypingIndicator() {
-  const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'typing-indicator';
-  div.id = 'typing';
-  div.innerHTML = '<span></span><span></span><span></span>';
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function removeTypingIndicator() {
-  const el = document.getElementById('typing');
-  if (el) el.remove();
-}
-
-function processStep(stepIdx) {
-  if (!selectedScenario) return;
-  const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
-  const step = SCENARIOS[sIdx].steps[stepIdx];
-  const stepI18n = SCENARIO_I18N[sIdx].steps[stepIdx];
-
-  if (step.type === 'user') {
-    addMessage('user', stepI18n.text[currentLang]);
-  } else if (step.type === 'agent') {
-    const agentIdx = AGENTS.findIndex(a => a.id === step.agentId);
-    addTypingIndicator();
-    setTimeout(() => {
-      removeTypingIndicator();
-      addMessage('agent', stepI18n.text[currentLang], getAgentName(agentIdx), AGENTS[agentIdx].color);
-    }, 400);
+function renderMessage(s, index) {
+  const typeClass = `msg-${s.type}`;
+  const labelMap = {
+    customer: s.agent === 'customer' ? (locale === 'zh' ? '客户' : 'Customer') : '',
+    agent: getAgentName(s.agent),
+    tool_call: `🔧 ${s.toolName || ''}`,
+    handoff: `🔄 ${locale === 'zh' ? '转接' : 'Handoff'}`,
+    guardrail: '🛡️ Guardrail',
+    constraint: '⚠️ Constraint',
+    escalation: '🔶 Escalation',
+    routing: '🔵 Routing'
+  };
+  let ruleBadge = '';
+  if (['guardrail', 'constraint', 'escalation', 'routing'].includes(s.type)) {
+    ruleBadge = `<div class="msg-rule ${s.type}">${s.ruleName || ''}</div>`;
   }
-  updateAgentPanel();
-  updateProgress();
+  const label = labelMap[s.type] || '';
+  const bubble = s.content || '';
+  return `<div class="msg ${typeClass}"><div class="msg-label">${label}</div>${ruleBadge}<div class="msg-bubble">${escHtml(bubble)}</div></div>`;
+}
+
+function renderDemoAgentView(demo, step, scenario) {
+  const container = document.getElementById('demo-agent-view');
+  const steps = scenario.steps || [];
+  const currentStep = steps[step] || {};
+  const activeAgentId = currentStep.agent || 'triage';
+  const allAgents = [demo.architecture.triageAgent, ...(demo.architecture.spokeAgents || [])];
+  const activeAgent = allAgents.find(a => a.id === activeAgentId || a.name === activeAgentId) || allAgents[0];
+  const appliedRules = (demo.architecture.businessRules || []).filter(r => (r.appliesTo || []).includes(activeAgentId));
+  // Runner events up to current step
+  const events = steps.slice(0, step + 1).filter(s => s.type === 'tool_call' || s.type === 'handoff' || ['guardrail', 'constraint', 'escalation', 'routing'].includes(s.type));
+  container.innerHTML = `
+    <div class="demo-agent-section">
+      <div class="demo-agent-section-title">⭐ <span data-i18n="triage">${t('triage')}</span></div>
+      <div class="agent-active-card">
+        <span class="agent-active-icon">${activeAgent.icon || '🤖'}</span>
+        <div>
+          <div class="agent-active-name">${escHtml(activeAgent.name)}</div>
+          <div class="agent-active-role">${escHtml(activeAgent.description || '').substring(0, 50)}...</div>
+        </div>
+        <span class="agent-active-badge">ACTIVE</span>
+      </div>
+    </div>
+    <div class="demo-agent-section">
+      <div class="demo-agent-section-title">🔀 <span>${locale === 'zh' ? 'Agent 路由网格' : 'Agent Routing Grid'}</span></div>
+      <div class="agent-grid">
+        ${allAgents.map(a => {
+          const isActive = a.id === activeAgentId || a.name === activeAgentId;
+          return `<div class="agent-mini-card ${isActive ? 'active' : ''}">
+            <span class="agent-mini-icon">${a.icon || '🤖'}</span>
+            <span class="agent-mini-name">${escHtml(a.name)}</span>
+            <span class="active-dot"></span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="demo-agent-section">
+      <div class="demo-agent-section-title">📋 <span>${locale === 'zh' ? '对话上下文' : 'Context'}</span></div>
+      <div class="context-box">
+        <div class="context-row"><span class="context-label">${t('contextSession')}</span><span class="context-value">SID-${Date.now().toString().slice(-6)}</span></div>
+        <div class="context-row"><span class="context-label">${t('contextTurn')}</span><span class="context-value">${step + 1}</span></div>
+        <div class="context-row"><span class="context-label">${t('contextIntent')}</span><span class="context-value">${escHtml(currentStep.content || '').substring(0, 30)}...</span></div>
+      </div>
+    </div>
+    <div class="demo-agent-section">
+      <div class="demo-agent-section-title">🛡️ <span data-i18n="rulesStatus">${t('rulesStatus')}</span></div>
+      <div class="rules-grid">
+        ${appliedRules.map(r => {
+          const hasTriggered = steps.slice(0, step + 1).some(s => s.ruleName === r.name);
+          const status = hasTriggered ? (s => s.ruleType === 'guardrail' ? 'failed' : 'passed')(currentStep) : 'pending';
+          return `<div class="rule-mini-card">
+            <div class="rule-mini-name">${r.name}</div>
+            <span class="rule-mini-status ${status}">${status === 'passed' ? t('rulePassed') : status === 'failed' ? t('ruleFailed') : t('rulePending')}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="demo-agent-section">
+      <div class="demo-agent-section-title">⚙️ <span data-i18n="runnerEvents">${t('runnerEvents')}</span></div>
+      <div class="events-list">
+        ${events.slice(-5).map((ev, i) => {
+          const evType = ev.type === 'tool_call' ? 'tool' : ['guardrail','constraint','escalation','routing'].includes(ev.type) ? 'error' : 'info';
+          return `<div class="event-item ${evType}">[${i+1}] ${escHtml(ev.toolName || ev.content || ev.type)}</div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function nextStep() {
-  if (!selectedScenario || currentStep >= selectedScenario.steps.length) return;
-  processStep(currentStep);
-  currentStep++;
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  const demo = ver.demos[demoState.demoIndex];
+  if (!demo) return;
+  const scenario = demo.scenarios[demoState.scenarioIndex];
+  if (!scenario) return;
+  if (demoState.step < (scenario.steps || []).length - 1) {
+    demoState.step++;
+    renderDemoStep();
+  }
 }
 
-function autoPlay() {
-  if (!selectedScenario) return;
-  if (isAutoPlaying) {
-    stopAutoPlay();
-    return;
+function prevStep() {
+  if (demoState.step > 0) {
+    demoState.step--;
+    renderDemoStep();
   }
-  isAutoPlaying = true;
-  document.getElementById('btn-auto').textContent = t('btn_pause');
-  playNext();
 }
 
-function playNext() {
-  if (!isAutoPlaying || !selectedScenario || currentStep >= selectedScenario.steps.length) {
-    stopAutoPlay();
-    return;
-  }
-  nextStep();
-  if (currentStep < selectedScenario.steps.length) {
-    const step = SCENARIOS[selectedScenarioIdx].steps[currentStep - 1];
-    const delay = step.type === 'agent' ? 1200 : 600;
-    autoPlayTimer = setTimeout(playNext, delay);
+function resetDemo() {
+  demoState.step = 0;
+  autoPlaying = false;
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+  renderDemoStep();
+}
+
+function toggleAutoPlay() {
+  autoPlaying = !autoPlaying;
+  if (autoPlaying) {
+    autoPlayLoop();
   } else {
-    stopAutoPlay();
+    if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+    renderDemoStep();
   }
 }
 
-function stopAutoPlay() {
-  isAutoPlaying = false;
-  clearTimeout(autoPlayTimer);
-  autoPlayTimer = null;
-  const btn = document.getElementById('btn-auto');
-  if (btn) btn.textContent = t('btn_autoplay');
+function autoPlayLoop() {
+  if (!autoPlaying) return;
+  const ver = getCurrentAgentVersion();
+  if (!ver) return;
+  const demo = ver.demos[demoState.demoIndex];
+  if (!demo) return;
+  const scenario = demo.scenarios[demoState.scenarioIndex];
+  if (!scenario) return;
+  if (demoState.step < (scenario.steps || []).length - 1) {
+    demoState.step++;
+    renderDemoStep();
+    autoPlayTimer = setTimeout(autoPlayLoop, 1500);
+  } else {
+    autoPlaying = false;
+    renderDemoStep();
+  }
 }
 
-function updateProgress() {
-  if (!selectedScenario) return;
-  const total = selectedScenario.steps.length;
-  const pct = Math.round((currentStep / total) * 100);
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-text').textContent = `${currentStep} / ${total}`;
+function exitDemo() {
+  autoPlaying = false;
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+  document.getElementById('demo-overlay').style.display = 'none';
 }
 
-function updateAgentPanel() {
-  const panel = document.getElementById('agent-content');
-  if (!selectedScenario) {
-    panel.innerHTML = `<div style="text-align:center;color:var(--text-muted);margin-top:40px;font-size:13px">${t('agent_panel_placeholder')}</div>`;
+function getAgentName(agentIdOrName) {
+  const ver = getCurrentAgentVersion();
+  if (!ver) return agentIdOrName;
+  const demo = ver.demos[demoState.demoIndex];
+  if (!demo) return agentIdOrName;
+  const allAgents = [demo.architecture.triageAgent, ...(demo.architecture.spokeAgents || [])];
+  const found = allAgents.find(a => a.id === agentIdOrName || a.name === agentIdOrName);
+  return found ? found.name : agentIdOrName;
+}
+
+/* =============================================
+   ARCHITECTURE TAB
+   ============================================= */
+function renderArchTab(container) {
+  const demo = getCurrentDemo();
+  if (!demo || !demo.architecture) {
+    container.innerHTML = `<div class="no-data-state" style="padding:40px"><div class="icon">🏗️</div><h3>${locale === 'zh' ? '暂无架构图' : 'No Architecture Yet'}</h3><p>${locale === 'zh' ? '请先生成演示版本' : 'Please generate a demo first'}</p></div>`;
     return;
   }
-
-  const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
-
-  let activeAgent = 'triage';
-  let handoffTo = null;
-  let context = { confirmation_number: null, current_seat: null, destination: null, flight_number: null };
-  let guardrails = { relevance: null, jailbreak: null };
-  let guardrailFailStep = -1;
-  let events = [];
-
-  for (let i = 0; i < currentStep && i < selectedScenario.steps.length; i++) {
-    const step = selectedScenario.steps[i];
-    const stepI18n = SCENARIO_I18N[sIdx].steps[i];
-    if (step.type === 'event') {
-      if (step.handoffTo) { handoffTo = step.handoffTo; activeAgent = step.handoffTo; }
-      if (step.context) context = { ...context, ...step.context };
-      if (step.guardrails) guardrails = { ...guardrails, ...step.guardrails };
-      if (step.guardrailFailIdx !== undefined) guardrailFailStep = i;
-      events.push({ type: step.eventType, text: stepI18n.text[currentLang] || stepI18n.text['en'] });
-    }
-  }
-
-  const agentIdx = AGENTS.findIndex(a => a.id === activeAgent);
-  const agent = AGENTS[agentIdx];
-  let html = '';
-
-  // Active Agent
-  html += `<div><div class="section-title">${t('section_active_agent')}</div>`;
-  html += `<div class="active-agent-card" style="border-color:${agent.color}20;background:${agent.color}05">
-    <div class="aa-top">
-      <div class="aa-icon" style="background:${agent.color}15">${agent.icon}</div>
-      <div><div class="aa-name" style="color:${agent.color}">${getAgentName(agentIdx)}</div><div class="aa-desc">${getAgentDesc(agentIdx)}</div></div>
-    </div>
-    <div class="aa-tools">${agent.tools.map(t2 => `<span class="tool-badge">${t2}</span>`).join('')}</div>
-  </div></div>`;
-
-  // Agent Grid
-  html += `<div><div class="section-title">${t('section_agent_routing')}</div><div class="agent-grid">`;
-  AGENTS.forEach((a, ai) => {
-    let cls = 'inactive-agent';
-    if (a.id === activeAgent) cls = 'active-agent';
-    else if (a.id === handoffTo) cls = 'handoff-agent';
-    const wasActive = events.some(e => {
-      const name = getAgentName(ai);
-      return e.text.includes(name) || e.text.includes(AGENT_I18N[ai].name['en']);
-    });
-    if (wasActive && a.id !== activeAgent) cls = 'handoff-agent';
-
-    html += `<div class="agent-mini ${cls}">
-      <div class="m-icon">${a.icon}</div>
-      <div class="m-name">${getAgentName(ai).replace(/ Agent$/,'').replace(/ Agent$/,'')}</div>
-      ${a.id === activeAgent ? `<div class="m-badge">${t('badge_active')}</div>` : ''}
-    </div>`;
+  const arch = demo.architecture;
+  const triage = arch.triageAgent;
+  const spokes = arch.spokeAgents || [];
+  const rules = arch.businessRules || [];
+  const cx = 320, cy = 220, r = 160;
+  const spokePositions = spokes.map((s, i) => {
+    const angle = (2 * Math.PI * i) / spokes.length - Math.PI / 2;
+    return { agent: s, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
   });
-  html += `</div></div>`;
-
-  // Context
-  html += `<div><div class="section-title">${t('section_context')}</div><div class="context-grid">`;
-  const ctxItems = [
-    { key: t('ctx_confirmation'), val: context.confirmation_number },
-    { key: t('ctx_seat'), val: context.current_seat },
-    { key: t('ctx_destination'), val: context.destination },
-    { key: t('ctx_flight'), val: context.flight_number },
+  // Build SVG
+  const lines = [];
+  // Triage -> Spokes
+  spokePositions.forEach(sp => {
+    lines.push(`<line x1="${cx+50}" y1="${cy}" x2="${sp.x-50}" y2="${sp.y}" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow-start)"/>`);
+  });
+  // Spoke -> Triage
+  spokePositions.forEach(sp => {
+    lines.push(`<line x1="${sp.x-50}" y1="${sp.y}" x2="${cx+50}" y2="${cy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-small)"/>`);
+  });
+  const agentNodes = [
+    `<rect x="${cx-50}" y="${cy-35}" width="100" height="70" rx="10" fill="${triage.color || '#2563eb'}" filter="url(#shadow)"/>
+     <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#fff" font-size="22">${triage.icon || '🔀'}</text>
+     <text x="${cx}" y="${cy+18}" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">${escHtml(triage.name)}</text>`
   ];
-  ctxItems.forEach(item => {
-    const hasVal = item.val !== null && item.val !== undefined;
-    html += `<div class="context-item">
-      <span class="ctx-dot ${hasVal ? 'on' : 'off'}"></span>
-      <span class="ctx-key">${item.key}:</span>
-      <span class="ctx-val ${hasVal ? '' : 'null-val'}">${hasVal ? item.val : 'null'}</span>
-    </div>`;
+  spokePositions.forEach(sp => {
+    agentNodes.push(`<rect x="${sp.x-55}" y="${sp.y-30}" width="110" height="60" rx="8" fill="${sp.agent.color || '#059669'}" filter="url(#shadow)"/>
+     <text x="${sp.x}" y="${sp.y-5}" text-anchor="middle" fill="#fff" font-size="18">${sp.agent.icon || '🤖'}</text>
+     <text x="${sp.x}" y="${sp.y+15}" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">${escHtml(sp.agent.name)}</text>`);
   });
-  html += `</div></div>`;
-
-  // Guardrails
-  html += `<div><div class="section-title">${t('section_guardrails')}</div><div class="guardrails-grid">`;
-  const grItems = [
-    { name: t('gr_relevance'), status: guardrails.relevance, key:'relevance' },
-    { name: t('gr_jailbreak'), status: guardrails.jailbreak, key:'jailbreak' },
-  ];
-  grItems.forEach(g => {
-    let cls = '', statusHtml = '';
-    if (g.status === 'pass') {
-      cls = 'passed';
-      statusHtml = `<span class="gr-status pass">${t('gr_passed')}</span>`;
-    } else if (g.status === 'fail') {
-      cls = 'failed';
-      statusHtml = `<span class="gr-status fail">${t('gr_failed')}</span>`;
-    } else {
-      statusHtml = `<span class="gr-status" style="background:#e2e8f0;color:#64748b">${t('gr_pending')}</span>`;
-    }
-    let reasonHtml = '';
-    if (guardrailFailStep >= 0 && g.status === 'fail') {
-      const reason = getGuardrailFailReason(sIdx, guardrailFailStep);
-      reasonHtml = `<div class="gr-reason">${reason}</div>`;
-    }
-    html += `<div class="guardrail-card ${cls}">
-      <div class="gr-top"><span class="gr-name">${g.name}</span>${statusHtml}</div>
-      ${reasonHtml}
-    </div>`;
-  });
-  html += `</div></div>`;
-
-  // Runner Events
-  if (events.length > 0) {
-    html += `<div><div class="section-title">${t('section_events')}</div><div class="events-list">`;
-    events.forEach(e => {
-      const icons = { handoff:'🔄', tool_call:'🔧', tool_output:'📋', context_update:'🔄', guardrail:'🛡️' };
-      html += `<div class="event-item">
-        <span class="event-badge ${e.type}">${icons[e.type]||''} ${e.type.replace(/_/g,' ')}</span>
-        <span class="event-text">${e.text}</span>
-      </div>`;
-    });
-    html += `</div></div>`;
-  }
-
-  panel.innerHTML = html;
-}
-
-// =============================================
-// TAB 2: ARCHITECTURE SVG
-// =============================================
-function renderArchitectureSVG() {
-  const container = document.getElementById('arch-svg');
-  const cx = 400, cy = 250, hubR = 44, spokeR = 34, orbit = 170;
-  const spokes = AGENTS.filter(a => a.id !== 'triage');
-  const spokeIndices = AGENTS.map((a,i) => a.id !== 'triage' ? i : -1).filter(i => i >= 0);
-  const angles = spokes.map((_, i) => -90 + i * 72);
-
-  let svg = `<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="blur"/>
-        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
-      </marker>
-    </defs>`;
-
-  svg += `<pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#f1f5f9" stroke-width="0.5"/>
-  </pattern>
-  <rect width="800" height="500" fill="url(#grid)"/>`;
-
-  spokes.forEach((s, i) => {
-    const angle = angles[i] * Math.PI / 180;
-    const sx = cx + orbit * Math.cos(angle);
-    const sy = cy + orbit * Math.sin(angle);
-    const dx = sx - cx, dy = sy - cy;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const nx = dx/dist, ny = dy/dist;
-    const x1 = cx + nx * (hubR + 8);
-    const y1 = cy + ny * (hubR + 8);
-    const x2 = sx - nx * (spokeR + 8);
-    const y2 = sy - ny * (spokeR + 8);
-
-    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowhead)"/>`;
-    svg += `<line x1="${x2}" y1="${y2}" x2="${x1}" y2="${y1}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.5"/>`;
-  });
-
-  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+12}" fill="none" stroke="#2563eb" stroke-width="1" opacity="0.15"/>`;
-  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+20}" fill="none" stroke="#2563eb" stroke-width="0.5" opacity="0.08"/>`;
-
-  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR}" fill="#2563eb" filter="url(#glow)" opacity="0.95"/>`;
-  svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="white" font-size="18">🔀</text>`;
-  svg += `<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="white" font-size="9" font-weight="600">${currentLang === 'zh' ? '路由' : 'TRIAGE'}</text>`;
-
-  spokes.forEach((s, i) => {
-    const angle = angles[i] * Math.PI / 180;
-    const sx = cx + orbit * Math.cos(angle);
-    const sy = cy + orbit * Math.sin(angle);
-    const label = getAgentName(spokeIndices[i]).replace(/ Agent$/,'');
-
-    svg += `<circle cx="${sx}" cy="${sy}" r="${spokeR}" fill="${s.color}" opacity="0.9"/>`;
-    svg += `<text x="${sx}" y="${sy-2}" text-anchor="middle" fill="white" font-size="14">${s.icon}</text>`;
-    svg += `<text x="${sx}" y="${sy+11}" text-anchor="middle" fill="white" font-size="${currentLang === 'zh' ? 6 : 7}" font-weight="500">${label}</text>`;
-  });
-
-  svg += `<text x="${cx}" y="${30}" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">${t('arch_svg_title')}</text>`;
-  svg += `<text x="${cx}" y="${cy + orbit + spokeR + 30}" text-anchor="middle" fill="#94a3b8" font-size="9">${t('arch_svg_subtitle')}</text>`;
-
-  svg += `</svg>`;
-  container.innerHTML = svg;
-}
-
-// =============================================
-// TAB 3: AGENT DETAILS
-// =============================================
-let selectedAgentIdx = -1;
-
-function renderAgentCards() {
-  const grid = document.getElementById('agent-cards-grid');
-  grid.innerHTML = AGENTS.map((a, i) => `
-    <div class="agent-detail-card${selectedAgentIdx === i ? ' expanded' : ''}" id="adc-${i}" onclick="toggleAgent(${i})">
-      <div class="adc-top">
-        <div class="adc-icon-wrap" style="background:${a.color}12">${a.icon}</div>
-        <div>
-          <div class="adc-name">${getAgentName(i)}</div>
-          <span class="adc-tool-count" style="background:${a.color}10;color:${a.color}">${a.tools.length} ${t('tools_count')}</span>
+  container.innerHTML = `
+    <div class="arch-container">
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:16px" data-i18n="archTitle">${t('archTitle')}</h2>
+      <div class="arch-svg-container">
+        <svg class="arch-svg" viewBox="0 0 640 440" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity=".2"/></filter>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/></marker>
+            <marker id="arrow-start" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M8,0 L8,6 L0,3 z" fill="#94a3b8"/></marker>
+            <marker id="arrow-small" markerWidth="5" markerHeight="5" refX="4" refY="2" orient="auto"><path d="M0,0 L0,4 L4,2 z" fill="#94a3b8"/></marker>
+          </defs>
+          ${lines.join('\n')}
+          ${agentNodes.join('\n')}
+        </svg>
+      </div>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px" data-i18n="archConcept">${t('archConcept')}</h3>
+      <div class="concept-cards">
+        <div class="concept-card hub">
+          <div class="concept-card-title"><span class="card-icon">🔀</span>${t('hubConcept')}</div>
+          <div class="concept-card-desc">${t('hubConceptDesc')}</div>
+        </div>
+        <div class="concept-card handoff">
+          <div class="concept-card-title"><span class="card-icon">🔄</span>${t('handoffConcept')}</div>
+          <div class="concept-card-desc">${t('handoffConceptDesc')}</div>
+        </div>
+        <div class="concept-card guardrail">
+          <div class="concept-card-title"><span class="card-icon">🛡️</span>${t('guardrailConcept')}</div>
+          <div class="concept-card-desc">${t('guardrailConceptDesc')}</div>
+        </div>
+        <div class="concept-card rule-constraint">
+          <div class="concept-card-title"><span class="card-icon">⚠️</span>${t('constraintConcept')}</div>
+          <div class="concept-card-desc">${t('constraintConceptDesc')}</div>
+        </div>
+        <div class="concept-card rule-escalation">
+          <div class="concept-card-title"><span class="card-icon">🔶</span>${t('escalationConcept')}</div>
+          <div class="concept-card-desc">${t('escalationConceptDesc')}</div>
+        </div>
+        <div class="concept-card rule-routing">
+          <div class="concept-card-title"><span class="card-icon">🔵</span>${t('routingConcept')}</div>
+          <div class="concept-card-desc">${t('routingConceptDesc')}</div>
         </div>
       </div>
-      <div class="adc-desc">${getAgentDesc(i)}</div>
     </div>
-  `).join('');
+  `;
 }
 
-function toggleAgent(idx) {
-  if (selectedAgentIdx === idx) {
-    selectedAgentIdx = -1;
-    document.getElementById('agent-expanded').innerHTML = '';
-    document.querySelectorAll('.agent-detail-card').forEach(c => c.classList.remove('expanded'));
+/* =============================================
+   DETAIL TAB
+   ============================================= */
+function renderDetailTab(container) {
+  const demo = getCurrentDemo();
+  if (!demo || !demo.architecture) {
+    container.innerHTML = `<div class="no-data-state" style="padding:40px"><div class="icon">📋</div><h3>${locale === 'zh' ? '暂无详情' : 'No Details Yet'}</h3><p>${locale === 'zh' ? '请先生成演示版本' : 'Please generate a demo first'}</p></div>`;
     return;
   }
-  selectedAgentIdx = idx;
-  document.querySelectorAll('.agent-detail-card').forEach(c => c.classList.remove('expanded'));
-  document.getElementById('adc-'+idx).classList.add('expanded');
-
-  const a = AGENTS[idx];
-  let html = `<div class="agent-expanded">
-    <div class="aex-header" style="background:linear-gradient(135deg,${a.color},${a.color}dd)">
-      <span class="aex-icon">${a.icon}</span>
-      <div><h3>${getAgentName(idx)}</h3><p>${getAgentDesc(idx)}</p></div>
-    </div>
-    <div class="aex-body">
-      <div class="detail-section">
-        <h4>${t('tools_label')}</h4>`;
-  a.tools.forEach(t2 => {
-    const toolI18n = TOOL_I18N[t2] || { desc:{ en:'Tool function', zh:'工具函数' } };
-    const toolDetail = TOOL_DETAILS[t2] || { params:'' };
-    html += `<div class="tool-item">
-      <div class="ti-name">${t2}</div>
-      <div class="ti-desc">${toolI18n.desc[currentLang] || toolI18n.desc['en']}</div>
-      ${toolDetail.params ? `<div class="ti-params">${t('params_prefix')}${toolDetail.params}</div>` : ''}
-    </div>`;
-  });
-  html += `</div><div class="detail-section">
-    <h4>${t('handoff_targets_label')}</h4>`;
-  a.handoffIds.forEach(hId => {
-    const hi = AGENTS.findIndex(x => x.id === hId);
-    html += `<div class="handoff-item" onclick="toggleAgent(${hi})">
-      <span class="hi-icon">${AGENTS[hi].icon}</span>
-      <div style="flex:1">
-        <div class="hi-name">${getAgentName(hi)}</div>
-        <div class="hi-desc">${getAgentDesc(hi)}</div>
+  const arch = demo.architecture;
+  const triage = arch.triageAgent;
+  const spokes = arch.spokeAgents || [];
+  const rules = arch.businessRules || [];
+  const allAgents = [triage, ...spokes];
+  container.innerHTML = `
+    <div>
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">${locale === 'zh' ? 'Agent 详情' : 'Agent Details'}</h2>
+      <div class="detail-grid">
+        ${allAgents.map(a => {
+          const appliedRules = rules.filter(r => (r.appliesTo || []).includes(a.id));
+          return `
+            <div class="detail-card" onclick="this.classList.toggle('expanded')">
+              <div class="detail-card-header">
+                <span class="detail-card-icon">${a.icon || '🤖'}</span>
+                <span class="detail-card-title">${escHtml(a.name)}</span>
+                <span class="detail-card-expand">${locale === 'zh' ? '展开' : 'Expand'}</span>
+              </div>
+              <div class="detail-card-desc">${escHtml(a.description || '').substring(0, 80)}...</div>
+              <div class="detail-card-body">
+                <div class="detail-section-title">${t('detailTools')}</div>
+                ${(a.tools || []).map(t => `<div class="tool-item"><strong>${escHtml(t.name)}</strong> — ${escHtml(t.description)}</div>`).join('')}
+                <div class="detail-section-title">${t('detailHandoffs')}</div>
+                ${(a.handoffs || []).map(h => `<div class="handoff-item">→ ${escHtml(h.label || h.agentId)}</div>`).join('')}
+                ${appliedRules.length > 0 ? `
+                  <div class="detail-section-title">${t('detailRules')}</div>
+                  ${appliedRules.map(r => `<div class="rule-item ${r.type}"><strong>${escHtml(r.name)}</strong> (${r.type})<br><span style="font-size:12px;color:var(--text-2)">${escHtml(r.description)}</span></div>`).join('')}
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
       </div>
-      <span class="hi-arrow">→</span>
-    </div>`;
-  });
-  if (a.guardrailKeys.length > 0) {
-    html += `<h4 style="margin-top:16px">${t('guardrails_label')}</h4>`;
-    a.guardrailKeys.forEach(gk => {
-      const gI18n = GUARDRAIL_DETAIL_I18N[gk];
-      const isRel = gk.includes('Relevance');
-      const localName = isRel ? t('gr_relevance') : t('gr_jailbreak');
-      html += `<div class="guardrail-item">
-        <div class="gi-top"><span>${isRel ? '🎯' : '🔒'}</span><span class="gi-name">${localName}</span></div>
-        <div class="gi-desc">${gI18n.desc[currentLang] || gI18n.desc['en']}</div>
-      </div>`;
-    });
-  }
-  html += `</div></div></div>`;
-  document.getElementById('agent-expanded').innerHTML = html;
-  document.getElementById('agent-expanded').scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-
-function renderHandoffMatrix() {
-  const table = document.getElementById('matrix-table');
-
-  let html = `<thead><tr><th>${t('matrix_from_to')}</th>`;
-  AGENTS.forEach((a, i) => {
-    html += `<th>${getAgentName(i).replace(/ Agent$/,'')}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-  AGENTS.forEach((a, ai) => {
-    html += `<tr><td><div class="matrix-from"><span>${a.icon}</span><span>${getAgentName(ai).replace(/ Agent$/,'')}</span></div></td>`;
-    AGENTS.forEach((b, bi) => {
-      if (a.id === b.id) {
-        html += '<td><span class="self-cell" title="Self">·</span></td>';
-      } else if (a.handoffIds.includes(b.id)) {
-        html += `<td class="handoff-yes"><span class="handoff-badge" style="background:${b.color}18;color:${b.color};border:1px solid ${b.color}30">${a.icon}→${b.icon} ${getAgentName(bi).replace(/ Agent$/,'')}</span></td>`;
-      } else {
-        html += '<td><span class="no-handoff" title="No direct handoff">✕</span></td>';
-      }
-    });
-    html += '</tr>';
-  });
-
-  html += '</tbody>';
-  table.innerHTML = html;
-
-  // Add legend
-  const legend = table.parentElement.querySelector('.matrix-legend') || document.createElement('div');
-  legend.className = 'matrix-legend';
-  legend.style.cssText = 'display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text-sec);align-items:center;flex-wrap:wrap';
-  legend.innerHTML = `
-    <span style="display:flex;align-items:center;gap:4px"><span class="handoff-badge" style="background:#05966918;color:#059669;border:1px solid #05966930;font-size:9px;padding:1px 6px">✈️→🎫 Booking</span> ${t('matrix_legend_yes')}</span>
-    <span style="display:flex;align-items:center;gap:4px"><span class="no-handoff" style="width:18px;height:18px;font-size:10px">✕</span> ${t('matrix_legend_no')}</span>
-    <span style="display:flex;align-items:center;gap:4px"><span class="self-cell" style="width:18px;height:18px;font-size:10px">·</span> ${t('matrix_legend_self')}</span>
+      ${renderMatrix(arch, allAgents)}
+      <h2 style="font-size:18px;font-weight:700;margin:20px 0 16px">${locale === 'zh' ? '业务场景' : 'Business Scenarios'}</h2>
+      <div class="scenario-list">
+        ${(demo.scenarios || []).map((s, i) => `
+          <div class="scenario-item">
+            <div class="scenario-item-name">
+              ${escHtml(s.name || s.nameEn || 'Scenario ' + (i+1))}
+              <span class="type-badge" style="background:${s.type === 'guardrail-trigger' ? '#fee2e2;color:var(--danger)' : s.type === 'flight-delay' ? '#d1fae5;color:var(--success)' : '#eff6ff;color:var(--primary)'}">${s.type ? (t('scenarioTypes')[s.type] || s.type) : 'standard'}</span>
+            </div>
+            <div class="scenario-item-desc">${escHtml(s.description || '')}</div>
+            <div class="scenario-item-meta"><span>📋 ${(s.steps || []).length} ${t('detailSteps')}</span></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
   `;
-  if (!table.parentElement.querySelector('.matrix-legend')) table.parentElement.appendChild(legend);
 }
 
-// =============================================
-// INIT
-// =============================================
-initScenarioGrid();
-updateAgentPanel();
-renderArchitectureSVG();
-renderAgentCards();
-renderHandoffMatrix();
+function renderMatrix(arch, allAgents) {
+  const matrix = arch.handoffMatrix && arch.handoffMatrix.from_to ? arch.handoffMatrix.from_to : {};
+  const agentIds = allAgents.map(a => a.id);
+  const agentMap = Object.fromEntries(allAgents.map(a => [a.id, a]));
+  const rows = [];
+  agentIds.forEach(fromId => {
+    const targets = matrix[fromId] || [];
+    const cells = agentIds.map(toId => {
+      if (fromId === toId) return `<td><span class="matrix-no">·</span></td>`;
+      const has = targets.includes(toId);
+      if (has) {
+        const from = agentMap[fromId];
+        return `<td><span class="matrix-yes" style="background:${from.color}22;color:${from.color}">${from.icon || '→'}→</span></td>`;
+      }
+      return `<td><span class="matrix-no">✕</span></td>`;
+    });
+    const from = agentMap[fromId];
+    rows.push(`<tr><td class="matrix-from"><span style="color:${from.color}">${from.icon || ''}</span> ${escHtml(from.name)}</td>${cells.join('')}</tr>`);
+  });
+  const headers = agentIds.map(id => {
+    const a = agentMap[id];
+    return `<th><span style="color:${a.color}">${a.icon || ''}</span><br>${escHtml(a.name)}</th>`;
+  });
+  return `
+    <div style="margin-top:20px">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">${locale === 'zh' ? 'Handoff 关系矩阵' : 'Handoff Relationship Matrix'}</h3>
+      <div class="matrix-container">
+        <table class="matrix-table">
+          <thead><tr><th>${t('matrixFromTo')}</th>${headers.join('')}</tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text-2)">
+        <span><span class="matrix-yes" style="background:#d1fae5;color:var(--success)">→→</span> = ${locale === 'zh' ? '可转接' : 'Handoff OK'}</span>
+        <span><span class="matrix-no">✕</span> = ${locale === 'zh' ? '无直接转接' : 'No direct handoff'}</span>
+        <span><span class="matrix-no">·</span> = ${locale === 'zh' ? '自身' : 'Self'}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* =============================================
+   UTILS
+   ============================================= */
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =============================================
+   INIT
+   ============================================= */
+async function init() {
+  try {
+    const data = await loadAgents();
+    agents = data.agents || [];
+  } catch(e) {
+    agents = [];
+  }
+  setLocale(locale);
+  renderAgentList();
+  // Auto-select first agent if available
+  if (agents.length > 0) {
+    selectAgent(agents[0].id);
+  }
+}
+
+init();
 </script>
 </body>
 </html>
