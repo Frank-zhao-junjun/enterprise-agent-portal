@@ -31,10 +31,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 .header-icon{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;backdrop-filter:blur(4px)}
 .header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 .header p{color:#bfdbfe;font-size:12px;margin-top:1px}
-.header-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:12px}
 .header-badge{font-size:11px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:999px;backdrop-filter:blur(4px)}
 .header-link{color:#bfdbfe;text-decoration:none;font-size:12px;transition:color .2s}
 .header-link:hover{color:#fff}
+.lang-toggle{display:flex;align-items:center;background:rgba(255,255,255,.12);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(4px)}
+.lang-btn{font-size:12px;font-weight:600;border:none;cursor:pointer;padding:5px 12px;transition:all .2s;color:rgba(255,255,255,.6);background:transparent}
+.lang-btn:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.08)}
+.lang-btn.active{color:#fff;background:rgba(255,255,255,.2)}
 
 /* === TABS === */
 .tabs{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:40}
@@ -258,10 +262,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
   <div class="header-inner">
     <div class="header-icon">✈️</div>
     <div>
-      <h1>OpenAI Airlines Agent Demo</h1>
-      <p>Hub-and-Spoke Multi-Agent Architecture with Guardrails</p>
+      <h1 data-i18n="header_title">OpenAI Airlines Agent Demo</h1>
+      <p data-i18n="header_subtitle">Hub-and-Spoke Multi-Agent Architecture with Guardrails</p>
     </div>
     <div class="header-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="lang-zh" onclick="setLang('zh')">中文</button>
+      </div>
       <span class="header-badge">OpenAI Agents SDK</span>
       <a href="https://github.com/openai/openai-cs-agents-demo" target="_blank" class="header-link">GitHub ↗</a>
     </div>
@@ -273,15 +281,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
   <div class="tabs-inner">
     <button class="tab-btn active" onclick="switchTab(0)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Interactive Demo
+      <span data-i18n="tab_interactive">Interactive Demo</span>
     </button>
     <button class="tab-btn" onclick="switchTab(1)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10A15 15 0 0112 2z"/></svg>
-      Architecture
+      <span data-i18n="tab_architecture">Architecture</span>
     </button>
     <button class="tab-btn" onclick="switchTab(2)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Agent Details
+      <span data-i18n="tab_agents">Agent Details</span>
     </button>
   </div>
 </nav>
@@ -293,14 +301,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
   <div class="tab-content active" id="tab-0">
     <div class="scenario-grid" id="scenario-grid"></div>
     <div class="chat-layout" id="chat-layout" style="display:none">
-      <!-- Chat Panel -->
       <div class="chat-panel">
         <div class="panel-header chat-h">
-          <h3>💬 Customer Chat</h3>
+          <h3 data-i18n="chat_title">💬 Customer Chat</h3>
           <div class="panel-actions">
-            <button class="action-btn primary" id="btn-auto" onclick="autoPlay()" disabled>▶ Auto Play</button>
-            <button class="action-btn" id="btn-next" onclick="nextStep()" disabled>Next Step →</button>
-            <button class="action-btn" id="btn-reset" onclick="resetDemo()">↺ Reset</button>
+            <button class="action-btn primary" id="btn-auto" onclick="autoPlay()" disabled data-i18n="btn_autoplay">▶ Auto Play</button>
+            <button class="action-btn" id="btn-next" onclick="nextStep()" disabled data-i18n="btn_nextstep">Next Step →</button>
+            <button class="action-btn" id="btn-reset" onclick="resetDemo()" data-i18n="btn_reset">↺ Reset</button>
           </div>
         </div>
         <div class="messages" id="messages"></div>
@@ -309,81 +316,80 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
           <div class="progress-text" id="progress-text">0 / 0</div>
         </div>
       </div>
-      <!-- Agent Panel -->
       <div class="agent-panel">
         <div class="panel-header agent-h">
-          <h3>🤖 Agent View</h3>
+          <h3 data-i18n="agent_view_title">🤖 Agent View</h3>
         </div>
         <div class="agent-content" id="agent-content"></div>
       </div>
     </div>
     <div class="welcome-screen" id="welcome-screen">
       <div class="w-icon">✈️</div>
-      <h3>Select a scenario to begin</h3>
-      <p>Choose a preset conversation to see the Agent system in action</p>
+      <h3 data-i18n="welcome_title">Select a scenario to begin</h3>
+      <p data-i18n="welcome_desc">Choose a preset conversation to see the Agent system in action</p>
     </div>
   </div>
 
   <!-- TAB 2: ARCHITECTURE -->
   <div class="tab-content" id="tab-1">
     <div class="arch-section">
-      <h2>Hub-and-Spoke Architecture</h2>
-      <p class="arch-desc">The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.</p>
+      <h2 data-i18n="arch_title">Hub-and-Spoke Architecture</h2>
+      <p class="arch-desc" data-i18n="arch_desc">The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.</p>
       <div class="svg-container" id="arch-svg"></div>
     </div>
 
     <div class="arch-section">
-      <h2>Core Concepts</h2>
+      <h2 data-i18n="concepts_title">Core Concepts</h2>
       <div class="concept-cards">
         <div class="concept-card">
           <div class="cc-icon" style="background:#eff6ff;color:var(--blue)">🔀</div>
-          <h3>Hub Mechanism</h3>
-          <p>The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.</p>
+          <h3 data-i18n="concept_hub_title">Hub Mechanism</h3>
+          <p data-i18n="concept_hub_desc">The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.</p>
         </div>
         <div class="concept-card">
           <div class="cc-icon" style="background:#f3e8ff;color:var(--purple)">🔄</div>
-          <h3>Handoff Mechanism</h3>
-          <p>Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.</p>
+          <h3 data-i18n="concept_handoff_title">Handoff Mechanism</h3>
+          <p data-i18n="concept_handoff_desc">Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.</p>
         </div>
         <div class="concept-card">
           <div class="cc-icon" style="background:#fef2f2;color:var(--red)">🛡️</div>
-          <h3>Input Guardrails</h3>
-          <p>Two guardrails protect the system: <strong>Relevance Check</strong> ensures queries relate to airline services; <strong>Jailbreak Detection</strong> blocks attempts to override system instructions or access unauthorized capabilities.</p>
+          <h3 data-i18n="concept_guardrail_title">Input Guardrails</h3>
+          <p data-i18n="concept_guardrail_desc">Two guardrails protect the system: Relevance Check ensures queries relate to airline services; Jailbreak Detection blocks attempts to override system instructions or access unauthorized capabilities.</p>
         </div>
       </div>
     </div>
 
     <div class="arch-section">
-      <h2>Request Flow</h2>
+      <h2 data-i18n="flow_title">Request Flow</h2>
       <div class="flow-steps">
         <div class="flow-step">
           <div class="step-num">1</div>
-          <h4>User Message</h4>
-          <p>Customer sends a message through the chat interface</p>
+          <h4 data-i18n="flow_step1_title">User Message</h4>
+          <p data-i18n="flow_step1_desc">Customer sends a message through the chat interface</p>
           <span class="flow-arrow">→</span>
         </div>
         <div class="flow-step">
           <div class="step-num">2</div>
-          <h4>Guardrails Check</h4>
-          <p>Input is validated for relevance and safety before processing</p>
+          <h4 data-i18n="flow_step2_title">Guardrails Check</h4>
+          <p data-i18n="flow_step2_desc">Input is validated for relevance and safety before processing</p>
           <span class="flow-arrow">→</span>
         </div>
         <div class="flow-step">
           <div class="step-num">3</div>
-          <h4>Agent Processing</h4>
-          <p>Triage Agent routes to the appropriate specialist agent</p>
+          <h4 data-i18n="flow_step3_title">Agent Processing</h4>
+          <p data-i18n="flow_step3_desc">Triage Agent routes to the appropriate specialist agent</p>
           <span class="flow-arrow">→</span>
         </div>
         <div class="flow-step">
           <div class="step-num">4</div>
-          <h4>Handoff / Response</h4>
-          <p>Agent executes tools and responds, or hands off to another agent</p>
+          <h4 data-i18n="flow_step4_title">Handoff / Response</h4>
+          <p data-i18n="flow_step4_desc">Agent executes tools and responds, or hands off to another agent</p>
         </div>
       </div>
     </div>
 
     <div class="arch-section">
-      <h2>Technology Stack</h2>
+      <h2 data-i18n="techstack_title">Technology Stack</h2>
       <div class="tech-stack">
         <div class="tech-item"><span class="tech-dot"></span>OpenAI Agents SDK</div>
         <div class="tech-item"><span class="tech-dot"></span>FastAPI</div>
@@ -398,13 +404,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
   <!-- TAB 3: AGENT DETAILS -->
   <div class="tab-content" id="tab-2">
     <div class="arch-section">
-      <h2>Agent Overview</h2>
-      <p class="arch-desc">6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.</p>
+      <h2 data-i18n="agents_overview_title">Agent Overview</h2>
+      <p class="arch-desc" data-i18n="agents_overview_desc">6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.</p>
     </div>
     <div class="agent-cards-grid" id="agent-cards-grid"></div>
     <div class="agent-expanded" id="agent-expanded"></div>
     <div class="handoff-matrix">
-      <h2>Handoff Relationship Matrix</h2>
+      <h2 data-i18n="matrix_title">Handoff Relationship Matrix</h2>
       <table class="matrix-table" id="matrix-table"></table>
     </div>
   </div>
@@ -412,81 +418,339 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 
 <script>
 // =============================================
-// DATA DEFINITIONS
+// I18N SYSTEM
+// =============================================
+let currentLang = 'en';
+
+const I18N = {
+  // Header
+  header_title: { en:'OpenAI Airlines Agent Demo', zh:'OpenAI 航空 Agent 演示' },
+  header_subtitle: { en:'Hub-and-Spoke Multi-Agent Architecture with Guardrails', zh:'带护栏的 Hub-and-Spoke 多 Agent 架构' },
+  // Tabs
+  tab_interactive: { en:'Interactive Demo', zh:'交互式演示' },
+  tab_architecture: { en:'Architecture', zh:'架构图' },
+  tab_agents: { en:'Agent Details', zh:'Agent 详情' },
+  // Chat panel
+  chat_title: { en:'💬 Customer Chat', zh:'💬 客户对话' },
+  agent_view_title: { en:'🤖 Agent View', zh:'🤖 Agent 视图' },
+  btn_autoplay: { en:'▶ Auto Play', zh:'▶ 自动播放' },
+  btn_pause: { en:'⏸ Pause', zh:'⏸ 暂停' },
+  btn_nextstep: { en:'Next Step →', zh:'下一步 →' },
+  btn_reset: { en:'↺ Reset', zh:'↺ 重置' },
+  // Welcome
+  welcome_title: { en:'Select a scenario to begin', zh:'选择一个场景开始' },
+  welcome_desc: { en:'Choose a preset conversation to see the Agent system in action', zh:'选择预设对话，查看 Agent 系统的实际运行效果' },
+  // Agent panel sections
+  section_active_agent: { en:'Active Agent', zh:'当前 Agent' },
+  section_agent_routing: { en:'Agent Routing', zh:'Agent 路由' },
+  section_context: { en:'Conversation Context', zh:'对话上下文' },
+  section_guardrails: { en:'Input Guardrails', zh:'输入护栏' },
+  section_events: { en:'Runner Events', zh:'运行器事件' },
+  // Context keys
+  ctx_confirmation: { en:'Confirmation', zh:'确认号' },
+  ctx_seat: { en:'Seat', zh:'座位' },
+  ctx_destination: { en:'Destination', zh:'目的地' },
+  ctx_flight: { en:'Flight', zh:'航班号' },
+  // Guardrail names
+  gr_relevance: { en:'Relevance Check', zh:'相关性检查' },
+  gr_jailbreak: { en:'Jailbreak Detection', zh:'越狱检测' },
+  // Guardrail statuses
+  gr_passed: { en:'✓ PASSED', zh:'✓ 通过' },
+  gr_failed: { en:'✗ FAILED', zh:'✗ 失败' },
+  gr_pending: { en:'PENDING', zh:'待检测' },
+  // Agent panel placeholder
+  agent_panel_placeholder: { en:'Select a scenario to view Agent activity', zh:'选择一个场景以查看 Agent 活动' },
+  // ACTIVE badge
+  badge_active: { en:'ACTIVE', zh:'活跃' },
+  // Architecture
+  arch_title: { en:'Hub-and-Spoke Architecture', zh:'Hub-and-Spoke 架构' },
+  arch_desc: { en:'The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.', zh:'Triage Agent 作为中心枢纽，通过 Handoff 机制将客户请求路由到专业 Spoke Agent。' },
+  arch_svg_title: { en:'Hub-and-Spoke Architecture', zh:'Hub-and-Spoke 架构' },
+  arch_svg_subtitle: { en:'Triage Agent routes to specialist agents via Handoff mechanism', zh:'Triage Agent 通过 Handoff 机制路由到专业 Agent' },
+  // Concepts
+  concepts_title: { en:'Core Concepts', zh:'核心概念' },
+  concept_hub_title: { en:'Hub Mechanism', zh:'Hub 机制' },
+  concept_hub_desc: { en:'The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.', zh:'Triage Agent 作为中心枢纽，接收所有传入消息，分析意图，并路由到相应的专业 Agent。它维护对话上下文并协调 Agent 之间的 Handoff。' },
+  concept_handoff_title: { en:'Handoff Mechanism', zh:'Handoff 机制' },
+  concept_handoff_desc: { en:'Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.', zh:'Agent 可以通过结构化的 Handoff 工具将控制权转移给其他 Agent。每次 Handoff 都保留完整的对话上下文，使接收 Agent 能无缝继续交互。' },
+  concept_guardrail_title: { en:'Input Guardrails', zh:'输入护栏' },
+  concept_guardrail_desc: { en:'Two guardrails protect the system: Relevance Check ensures queries relate to airline services; Jailbreak Detection blocks attempts to override system instructions or access unauthorized capabilities.', zh:'两个护栏保护系统：相关性检查确保查询与航空服务相关；越狱检测阻止覆盖系统指令或访问未授权功能的尝试。' },
+  // Flow
+  flow_title: { en:'Request Flow', zh:'请求流程' },
+  flow_step1_title: { en:'User Message', zh:'用户消息' },
+  flow_step1_desc: { en:'Customer sends a message through the chat interface', zh:'客户通过聊天界面发送消息' },
+  flow_step2_title: { en:'Guardrails Check', zh:'护栏检查' },
+  flow_step2_desc: { en:'Input is validated for relevance and safety before processing', zh:'在处理前验证输入的相关性和安全性' },
+  flow_step3_title: { en:'Agent Processing', zh:'Agent 处理' },
+  flow_step3_desc: { en:'Triage Agent routes to the appropriate specialist agent', zh:'Triage Agent 路由到相应的专业 Agent' },
+  flow_step4_title: { en:'Handoff / Response', zh:'Handoff / 响应' },
+  flow_step4_desc: { en:'Agent executes tools and responds, or hands off to another agent', zh:'Agent 执行工具并响应，或 Handoff 给另一个 Agent' },
+  // Tech stack
+  techstack_title: { en:'Technology Stack', zh:'技术栈' },
+  // Agent details
+  agents_overview_title: { en:'Agent Overview', zh:'Agent 概览' },
+  agents_overview_desc: { en:'6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.', zh:'6 个专业 Agent 以 Hub-and-Spoke 模式协同工作，处理航空客户服务请求。' },
+  tools_label: { en:'🔧 Tools', zh:'🔧 工具' },
+  handoff_targets_label: { en:'↔️ Handoff Targets', zh:'↔️ Handoff 目标' },
+  guardrails_label: { en:'🛡️ Input Guardrails', zh:'🛡️ 输入护栏' },
+  params_prefix: { en:'params: ', zh:'参数: ' },
+  tools_count: { en:'tools', zh:'个工具' },
+  // Matrix
+  matrix_title: { en:'Handoff Relationship Matrix', zh:'Handoff 关系矩阵' },
+  matrix_from_to: { en:'From \\ To', zh:'来源 \\ 目标' },
+};
+
+// Agent i18n data
+const AGENT_I18N = [
+  { name:{ en:'Triage Agent', zh:'路由 Agent' }, desc:{ en:'Central hub that routes customer requests to the appropriate specialist agent', zh:'中心枢纽，将客户请求路由到相应的专业 Agent' } },
+  { name:{ en:'Flight Information Agent', zh:'航班信息 Agent' }, desc:{ en:'Handles flight status inquiries and flight search requests', zh:'处理航班状态查询和航班搜索请求' } },
+  { name:{ en:'Booking and Cancellation Agent', zh:'预订与取消 Agent' }, desc:{ en:'Manages flight bookings, cancellations, and itinerary changes', zh:'管理航班预订、取消和行程变更' } },
+  { name:{ en:'Seat and Special Services Agent', zh:'座位与特殊服务 Agent' }, desc:{ en:'Handles seat changes, seat map display, and special service assignments', zh:'处理座位变更、座位图显示和特殊服务分配' } },
+  { name:{ en:'FAQ Agent', zh:'常见问题 Agent' }, desc:{ en:'Answers frequently asked questions about airline policies and services', zh:'回答关于航空政策和服务的常见问题' } },
+  { name:{ en:'Refunds and Compensation Agent', zh:'退款与补偿 Agent' }, desc:{ en:'Processes refund requests and issues compensation for service issues', zh:'处理退款请求和因服务问题发放补偿' } },
+];
+
+// Tool i18n
+const TOOL_I18N = {
+  get_trip_details: { desc:{ en:'Retrieve trip details using a confirmation number', zh:'使用确认号检索行程详情' } },
+  flight_status_tool: { desc:{ en:'Get the current status of a flight', zh:'获取航班当前状态' } },
+  get_matching_flights: { desc:{ en:'Search for flights matching given criteria', zh:'搜索符合条件的航班' } },
+  cancel_flight: { desc:{ en:'Cancel a confirmed flight booking', zh:'取消已确认的航班预订' } },
+  book_new_flight: { desc:{ en:'Book a new flight for the customer', zh:'为客户预订新航班' } },
+  update_seat: { desc:{ en:'Update the seat assignment for a booking', zh:'更新预订的座位分配' } },
+  assign_special_service_seat: { desc:{ en:'Assign a seat that meets special service requirements', zh:'分配满足特殊服务需求的座位' } },
+  display_seat_map: { desc:{ en:'Display the seat map for a given flight', zh:'显示指定航班的座位图' } },
+  faq_lookup_tool: { desc:{ en:'Look up answers to frequently asked questions', zh:'查找常见问题的答案' } },
+  issue_compensation: { desc:{ en:'Issue compensation to a customer for service disruptions', zh:'因服务中断向客户发放补偿' } },
+};
+
+// Scenario i18n
+const SCENARIO_I18N = [
+  {
+    title:{ en:'Seat Change', zh:'座位变更' },
+    desc:{ en:'Customer requests a window seat change for their upcoming flight', zh:'客户要求为即将到来的航班更换靠窗座位' },
+    steps:[
+      { type:'user', text:{ en:'Hi, I have a flight coming up and I would like to change my seat to a window seat.', zh:'你好，我马上有一个航班，我想把座位换成靠窗的。' } },
+      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → PASSED', zh:'相关性护栏 → 通过' }, guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', text:{ en:'Context: confirmation_number=ABC123, current_seat=12A', zh:'上下文: 确认号=ABC123, 当前座位=12A' }, context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
+      { type:'agent', agent:'Triage Agent', text:{ en:"I'd be happy to help you change your seat. Let me look up your trip details first.", zh:'很高兴为您更换座位。让我先查一下您的行程详情。' } },
+      { type:'event', eventType:'tool_call', text:{ en:'Triage Agent → get_trip_details(confirmation_number="ABC123")', zh:'路由 Agent → get_trip_details(确认号="ABC123")' } },
+      { type:'event', eventType:'tool_output', text:{ en:'Trip found: UA456 SFO→JFK, Seat 12A (aisle), Dec 15', zh:'找到行程: UA456 旧金山→纽约, 座位 12A (过道), 12月15日' } },
+      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Seat and Special Services Agent', zh:'路由 Agent → 座位与特殊服务 Agent' }, handoffTo:'seat' },
+      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:"I found your reservation. You're currently in 12A, which is an aisle seat. Let me show you the available window seats on your flight.", zh:'找到了您的预订。您目前在12A，这是一个过道座位。让我为您展示航班上可用的靠窗座位。' } },
+      { type:'event', eventType:'tool_call', text:{ en:'Seat Agent → display_seat_map(flight_number="UA456")', zh:'座位 Agent → display_seat_map(航班号="UA456")' } },
+      { type:'event', eventType:'tool_output', text:{ en:'Available window seats: 14A, 16A, 18F', zh:'可用靠窗座位: 14A, 16A, 18F' } },
+      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:'Here are the available window seats: 14A, 16A, and 18F. Which one would you prefer?', zh:'以下是可用的靠窗座位：14A、16A 和 18F。您更倾向于哪一个？' } },
+      { type:'user', text:{ en:"I'll take 14A please!", zh:'我想要14A！' } },
+      { type:'event', eventType:'tool_call', text:{ en:'Seat Agent → update_seat(confirmation_number="ABC123", new_seat="14A")', zh:'座位 Agent → update_seat(确认号="ABC123", 新座位="14A")' } },
+      { type:'event', eventType:'tool_output', text:{ en:'Seat updated successfully: 12A → 14A', zh:'座位更新成功: 12A → 14A' } },
+      { type:'agent', agent:'Seat and Special Services Agent', text:{ en:'Your seat has been updated to 14A. Is there anything else I can help you with?', zh:'您的座位已更新为14A。还有什么我可以帮您的吗？' } },
+    ]
+  },
+  {
+    title:{ en:'Flight Delay', zh:'航班延误' },
+    desc:{ en:'Customer reports a delayed flight and asks for compensation options', zh:'客户报告航班延误并询问补偿方案' },
+    steps:[
+      { type:'user', text:{ en:'My flight UA789 has been delayed by 3 hours. This is really frustrating. What are my options?', zh:'我的航班UA789延误了3个小时。这太令人沮丧了。我有什么选择？' } },
+      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → PASSED', zh:'相关性护栏 → 通过' }, guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', text:{ en:'Context: flight_number=UA789, delay=3hrs', zh:'上下文: 航班号=UA789, 延误=3小时' }, context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
+      { type:'agent', agent:'Triage Agent', text:{ en:"I'm sorry to hear about the delay. Let me check your flight status right away.", zh:'很抱歉听到延误的消息。让我立即查看您的航班状态。' } },
+      { type:'event', eventType:'tool_call', text:{ en:'Triage Agent → get_trip_details(confirmation_number inferred from session)', zh:'路由 Agent → get_trip_details(从会话推断确认号)' } },
+      { type:'event', eventType:'tool_output', text:{ en:'Trip found: UA789 LAX→ORD, Delayed 3hrs, original 2:00pm → est 5:00pm', zh:'找到行程: UA789 洛杉矶→芝加哥, 延误3小时, 原定 下午2:00 → 预计 下午5:00' } },
+      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Flight Information Agent', zh:'路由 Agent → 航班信息 Agent' }, handoffTo:'flight' },
+      { type:'agent', agent:'Flight Information Agent', text:{ en:'I can confirm that UA789 from LAX to ORD has been delayed by approximately 3 hours. The new estimated departure time is 5:00 PM. Would you like me to look for alternative flights?', zh:'我可以确认UA789从洛杉矶到芝加哥延误了大约3小时。新的预计起飞时间是下午5:00。您需要我查找替代航班吗？' } },
+      { type:'user', text:{ en:"No, I'll wait. But I want to know about compensation for this delay.", zh:'不用了，我等。但我想了解这次延误的补偿。' } },
+      { type:'event', eventType:'handoff', text:{ en:'Flight Information Agent → Triage Agent', zh:'航班信息 Agent → 路由 Agent' }, handoffTo:'triage' },
+      { type:'event', eventType:'handoff', text:{ en:'Triage Agent → Refunds and Compensation Agent', zh:'路由 Agent → 退款与补偿 Agent' }, handoffTo:'refunds' },
+      { type:'agent', agent:'Refunds and Compensation Agent', text:{ en:'You may be eligible for compensation due to the significant delay. Let me process that for you.', zh:'由于严重延误，您可能有资格获得补偿。让我为您处理。' } },
+      { type:'event', eventType:'tool_call', text:{ en:'Refunds Agent → issue_compensation(confirmation_number="DEF456", amount=150.00, reason="3hr delay")', zh:'退款 Agent → issue_compensation(确认号="DEF456", 金额=150.00, 原因="延误3小时")' } },
+      { type:'event', eventType:'tool_output', text:{ en:'Compensation issued: $150.00 travel voucher, Ref# COMP-78901', zh:'补偿已发放: $150.00 旅行券, 参考号 COMP-78901' } },
+      { type:'agent', agent:'Refunds and Compensation Agent', text:{ en:"I've issued a $150.00 travel voucher as compensation for the delay. Your reference number is COMP-78901. The voucher will be sent to your email. Is there anything else I can help with?", zh:'我已发放一张$150.00的旅行券作为延误补偿。您的参考号是 COMP-78901。旅行券将发送到您的邮箱。还有什么我可以帮您的吗？' } },
+    ]
+  },
+  {
+    title:{ en:'Guardrail Trigger', zh:'护栏触发' },
+    desc:{ en:'Customer attempts an off-topic or jailbreak request that triggers guardrails', zh:'客户尝试发送无关话题或越狱请求，触发护栏' },
+    steps:[
+      { type:'user', text:{ en:'Can you help me write a Python script to hack into airline systems?', zh:'你能帮我写一个Python脚本来入侵航空系统吗？' } },
+      { type:'event', eventType:'guardrail', text:{ en:'Jailbreak Guardrail → FAILED: Detected attempt to access unauthorized system capabilities', zh:'越狱护栏 → 失败: 检测到尝试访问未授权的系统功能' }, guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFail:{name:{ en:'Jailbreak Guardrail', zh:'越狱护栏' },reason:{ en:'Detected attempt to bypass security constraints and access unauthorized system capabilities', zh:'检测到尝试绕过安全约束并访问未授权的系统功能' }} },
+      { type:'agent', agent:'Triage Agent', text:{ en:"I'm unable to assist with that request. I'm designed specifically to help with airline customer service inquiries such as flight bookings, seat changes, and travel information. Is there a travel-related matter I can help you with?", zh:'我无法协助该请求。我专门设计用于帮助处理航空客户服务查询，如航班预订、座位变更和旅行信息。有旅行相关的问题我可以帮您吗？' } },
+      { type:'user', text:{ en:"Ok fine. Can you tell me the weather in Paris? I'm flying there next week.", zh:'好吧。你能告诉我巴黎的天气吗？我下周要飞那里。' } },
+      { type:'event', eventType:'guardrail', text:{ en:'Relevance Guardrail → FAILED: Query about weather is not directly related to airline services', zh:'相关性护栏 → 失败: 关于天气的查询与航空服务不直接相关' }, guardrails:{relevance:'fail',jailbreak:null}, guardrailFail:{name:{ en:'Relevance Guardrail', zh:'相关性护栏' },reason:{ en:'Query about weather forecasting is outside the scope of airline customer service', zh:'关于天气预报的查询超出了航空客户服务的范围' }} },
+      { type:'agent', agent:'Triage Agent', text:{ en:"I'm not able to provide weather information, but I can help you with your upcoming flight to Paris! Would you like me to look up your flight details, check your seat assignment, or answer questions about your booking?", zh:'我无法提供天气信息，但我可以帮助您处理飞往巴黎的航班！您需要我查看航班详情、检查座位分配，还是回答关于预订的问题？' } },
+    ]
+  }
+];
+
+// Guardrail i18n in agent details
+const GUARDRAIL_DETAIL_I18N = {
+  'Relevance Guardrail': { desc:{ en:'Ensures messages are relevant to airline customer service topics', zh:'确保消息与航空客户服务主题相关' } },
+  'Jailbreak Guardrail': { desc:{ en:'Detects and blocks attempts to bypass or override system instructions', zh:'检测并阻止绕过或覆盖系统指令的尝试' } },
+};
+
+function t(key) {
+  const entry = I18N[key];
+  if (!entry) return key;
+  return entry[currentLang] || entry['en'] || key;
+}
+
+function getAgentName(idx) {
+  return AGENT_I18N[idx].name[currentLang];
+}
+
+function getAgentDesc(idx) {
+  return AGENT_I18N[idx].desc[currentLang];
+}
+
+function getScenarioTitle(idx) {
+  return SCENARIO_I18N[idx].title[currentLang];
+}
+
+function getScenarioDesc(idx) {
+  return SCENARIO_I18N[idx].desc[currentLang];
+}
+
+function getStepText(scenarioIdx, stepIdx) {
+  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
+  if (typeof step.text === 'object') return step.text[currentLang] || step.text['en'];
+  return step.text;
+}
+
+function getGuardrailFailName(scenarioIdx, stepIdx) {
+  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
+  if (step.guardrailFail && typeof step.guardrailFail.name === 'object') {
+    return step.guardrailFail.name[currentLang] || step.guardrailFail.name['en'];
+  }
+  return step.guardrailFail ? step.guardrailFail.name : '';
+}
+
+function getGuardrailFailReason(scenarioIdx, stepIdx) {
+  const step = SCENARIO_I18N[scenarioIdx].steps[stepIdx];
+  if (step.guardrailFail && typeof step.guardrailFail.reason === 'object') {
+    return step.guardrailFail.reason[currentLang] || step.guardrailFail.reason['en'];
+  }
+  return step.guardrailFail ? step.guardrailFail.reason : '';
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+  document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+
+  // Re-render dynamic content
+  initScenarioGrid();
+  updateAgentPanel();
+  renderArchitectureSVG();
+  renderAgentCards();
+  renderHandoffMatrix();
+
+  // Re-render agent expanded if open
+  if (selectedAgentIdx >= 0) {
+    toggleAgent(selectedAgentIdx);
+    toggleAgent(selectedAgentIdx);
+  }
+
+  // Re-render chat messages if scenario is active
+  if (selectedScenario) {
+    const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
+    rerenderChatMessages(sIdx);
+
+    // Update button texts
+    const autoBtn = document.getElementById('btn-auto');
+    if (isAutoPlaying) {
+      autoBtn.textContent = t('btn_pause');
+    } else {
+      autoBtn.textContent = t('btn_autoplay');
+    }
+    document.getElementById('btn-next').textContent = t('btn_nextstep');
+    document.getElementById('btn-reset').textContent = t('btn_reset');
+  }
+}
+
+// =============================================
+// DATA DEFINITIONS (language-agnostic structure)
 // =============================================
 
 const AGENTS = [
-  { id:'triage', name:'Triage Agent', icon:'🔀', color:'#2563eb', desc:'Central hub that routes customer requests to the appropriate specialist agent', tools:['get_trip_details'], handoffs:['Flight Information Agent','Booking and Cancellation Agent','Seat and Special Services Agent','FAQ Agent','Refunds and Compensation Agent'], guardrails:['Relevance Guardrail','Jailbreak Guardrail'] },
-  { id:'flight', name:'Flight Information Agent', icon:'✈️', color:'#059669', desc:'Handles flight status inquiries and flight search requests', tools:['flight_status_tool','get_matching_flights'], handoffs:['Triage Agent'], guardrails:[] },
-  { id:'booking', name:'Booking and Cancellation Agent', icon:'🎫', color:'#7c3aed', desc:'Manages flight bookings, cancellations, and itinerary changes', tools:['cancel_flight','get_matching_flights','book_new_flight'], handoffs:['Triage Agent'], guardrails:[] },
-  { id:'seat', name:'Seat and Special Services Agent', icon:'💺', color:'#dc2626', desc:'Handles seat changes, seat map display, and special service assignments', tools:['update_seat','assign_special_service_seat','display_seat_map'], handoffs:['Triage Agent'], guardrails:[] },
-  { id:'faq', name:'FAQ Agent', icon:'❓', color:'#d97706', desc:'Answers frequently asked questions about airline policies and services', tools:['faq_lookup_tool'], handoffs:['Triage Agent'], guardrails:[] },
-  { id:'refunds', name:'Refunds and Compensation Agent', icon:'💰', color:'#0891b2', desc:'Processes refund requests and issues compensation for service issues', tools:['issue_compensation','faq_lookup_tool'], handoffs:['Triage Agent'], guardrails:[] },
+  { id:'triage', icon:'🔀', color:'#2563eb', tools:['get_trip_details'], handoffIds:['flight','booking','seat','faq','refunds'], guardrailKeys:['Relevance Guardrail','Jailbreak Guardrail'] },
+  { id:'flight', icon:'✈️', color:'#059669', tools:['flight_status_tool','get_matching_flights'], handoffIds:['triage'], guardrailKeys:[] },
+  { id:'booking', icon:'🎫', color:'#7c3aed', tools:['cancel_flight','get_matching_flights','book_new_flight'], handoffIds:['triage'], guardrailKeys:[] },
+  { id:'seat', icon:'💺', color:'#dc2626', tools:['update_seat','assign_special_service_seat','display_seat_map'], handoffIds:['triage'], guardrailKeys:[] },
+  { id:'faq', icon:'❓', color:'#d97706', tools:['faq_lookup_tool'], handoffIds:['triage'], guardrailKeys:[] },
+  { id:'refunds', icon:'💰', color:'#0891b2', tools:['issue_compensation','faq_lookup_tool'], handoffIds:['triage'], guardrailKeys:[] },
 ];
 
 const TOOL_DETAILS = {
-  get_trip_details: { desc:'Retrieve trip details using a confirmation number', params:'confirmation_number: str' },
-  flight_status_tool: { desc:'Get the current status of a flight', params:'flight_number: str' },
-  get_matching_flights: { desc:'Search for flights matching given criteria', params:'origin: str, destination: str, date: str' },
-  cancel_flight: { desc:'Cancel a confirmed flight booking', params:'confirmation_number: str, reason: str' },
-  book_new_flight: { desc:'Book a new flight for the customer', params:'origin: str, destination: str, date: str, passenger_name: str' },
-  update_seat: { desc:'Update the seat assignment for a booking', params:'confirmation_number: str, new_seat: str' },
-  assign_special_service_seat: { desc:'Assign a seat that meets special service requirements', params:'confirmation_number: str, service_type: str' },
-  display_seat_map: { desc:'Display the seat map for a given flight', params:'flight_number: str' },
-  faq_lookup_tool: { desc:'Look up answers to frequently asked questions', params:'query: str' },
-  issue_compensation: { desc:'Issue compensation to a customer for service disruptions', params:'confirmation_number: str, amount: float, reason: str' },
+  get_trip_details: { params:'confirmation_number: str' },
+  flight_status_tool: { params:'flight_number: str' },
+  get_matching_flights: { params:'origin: str, destination: str, date: str' },
+  cancel_flight: { params:'confirmation_number: str, reason: str' },
+  book_new_flight: { params:'origin: str, destination: str, date: str, passenger_name: str' },
+  update_seat: { params:'confirmation_number: str, new_seat: str' },
+  assign_special_service_seat: { params:'confirmation_number: str, service_type: str' },
+  display_seat_map: { params:'flight_number: str' },
+  faq_lookup_tool: { params:'query: str' },
+  issue_compensation: { params:'confirmation_number: str, amount: float, reason: str' },
 };
 
 const SCENARIOS = [
   {
-    id:'seat-change', title:'Seat Change', desc:'Customer requests a window seat change for their upcoming flight', icon:'💺', color:'blue',
+    id:'seat-change', icon:'💺', color:'blue',
     steps:[
-      { type:'user', text:'Hi, I have a flight coming up and I would like to change my seat to a window seat.' },
-      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → PASSED', guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', text:'Context: confirmation_number=ABC123, current_seat=12A', context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
-      { type:'agent', agent:'Triage Agent', text:'I\'d be happy to help you change your seat. Let me look up your trip details first.' },
-      { type:'event', eventType:'tool_call', text:'Triage Agent → get_trip_details(confirmation_number="ABC123")' },
-      { type:'event', eventType:'tool_output', text:'Trip found: UA456 SFO→JFK, Seat 12A (aisle), Dec 15' },
-      { type:'event', eventType:'handoff', text:'Triage Agent → Seat and Special Services Agent', handoffTo:'seat' },
-      { type:'agent', agent:'Seat and Special Services Agent', text:'I found your reservation. You\'re currently in 12A, which is an aisle seat. Let me show you the available window seats on your flight.' },
-      { type:'event', eventType:'tool_call', text:'Seat Agent → display_seat_map(flight_number="UA456")' },
-      { type:'event', eventType:'tool_output', text:'Available window seats: 14A, 16A, 18F' },
-      { type:'agent', agent:'Seat and Special Services Agent', text:'Here are the available window seats: 14A, 16A, and 18F. Which one would you prefer?' },
-      { type:'user', text:'I\'ll take 14A please!' },
-      { type:'event', eventType:'tool_call', text:'Seat Agent → update_seat(confirmation_number="ABC123", new_seat="14A")' },
-      { type:'event', eventType:'tool_output', text:'Seat updated successfully: 12A → 14A' },
-      { type:'agent', agent:'Seat and Special Services Agent', text:'Your seat has been updated to 14A. Is there anything else I can help you with?' },
+      { type:'user' },
+      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
+      { type:'agent', agentId:'triage' },
+      { type:'event', eventType:'tool_call' },
+      { type:'event', eventType:'tool_output' },
+      { type:'event', eventType:'handoff', handoffTo:'seat' },
+      { type:'agent', agentId:'seat' },
+      { type:'event', eventType:'tool_call' },
+      { type:'event', eventType:'tool_output' },
+      { type:'agent', agentId:'seat' },
+      { type:'user' },
+      { type:'event', eventType:'tool_call' },
+      { type:'event', eventType:'tool_output' },
+      { type:'agent', agentId:'seat' },
     ]
   },
   {
-    id:'flight-delay', title:'Flight Delay', desc:'Customer reports a delayed flight and asks for compensation options', icon:'✈️', color:'green',
+    id:'flight-delay', icon:'✈️', color:'green',
     steps:[
-      { type:'user', text:'My flight UA789 has been delayed by 3 hours. This is really frustrating. What are my options?' },
-      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → PASSED', guardrails:{relevance:'pass',jailbreak:null} },
-      { type:'event', eventType:'context_update', text:'Context: flight_number=UA789, delay=3hrs', context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
-      { type:'agent', agent:'Triage Agent', text:'I\'m sorry to hear about the delay. Let me check your flight status right away.' },
-      { type:'event', eventType:'tool_call', text:'Triage Agent → get_trip_details(confirmation_number inferred from session)' },
-      { type:'event', eventType:'tool_output', text:'Trip found: UA789 LAX→ORD, Delayed 3hrs, original 2:00pm → est 5:00pm' },
-      { type:'event', eventType:'handoff', text:'Triage Agent → Flight Information Agent', handoffTo:'flight' },
-      { type:'agent', agent:'Flight Information Agent', text:'I can confirm that UA789 from LAX to ORD has been delayed by approximately 3 hours. The new estimated departure time is 5:00 PM. Would you like me to look for alternative flights?' },
-      { type:'user', text:'No, I\'ll wait. But I want to know about compensation for this delay.' },
-      { type:'event', eventType:'handoff', text:'Flight Information Agent → Triage Agent', handoffTo:'triage' },
-      { type:'event', eventType:'handoff', text:'Triage Agent → Refunds and Compensation Agent', handoffTo:'refunds' },
-      { type:'agent', agent:'Refunds and Compensation Agent', text:'You may be eligible for compensation due to the significant delay. Let me process that for you.' },
-      { type:'event', eventType:'tool_call', text:'Refunds Agent → issue_compensation(confirmation_number="DEF456", amount=150.00, reason="3hr delay")' },
-      { type:'event', eventType:'tool_output', text:'Compensation issued: $150.00 travel voucher, Ref# COMP-78901' },
-      { type:'agent', agent:'Refunds and Compensation Agent', text:'I\'ve issued a $150.00 travel voucher as compensation for the delay. Your reference number is COMP-78901. The voucher will be sent to your email. Is there anything else I can help with?' },
+      { type:'user' },
+      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
+      { type:'agent', agentId:'triage' },
+      { type:'event', eventType:'tool_call' },
+      { type:'event', eventType:'tool_output' },
+      { type:'event', eventType:'handoff', handoffTo:'flight' },
+      { type:'agent', agentId:'flight' },
+      { type:'user' },
+      { type:'event', eventType:'handoff', handoffTo:'triage' },
+      { type:'event', eventType:'handoff', handoffTo:'refunds' },
+      { type:'agent', agentId:'refunds' },
+      { type:'event', eventType:'tool_call' },
+      { type:'event', eventType:'tool_output' },
+      { type:'agent', agentId:'refunds' },
     ]
   },
   {
-    id:'guardrail-trigger', title:'Guardrail Trigger', desc:'Customer attempts an off-topic or jailbreak request that triggers guardrails', icon:'🛡️', color:'red',
+    id:'guardrail-trigger', icon:'🛡️', color:'red',
     steps:[
-      { type:'user', text:'Can you help me write a Python script to hack into airline systems?' },
-      { type:'event', eventType:'guardrail', text:'Jailbreak Guardrail → FAILED: Detected attempt to access unauthorized system capabilities', guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFail:{name:'Jailbreak Guardrail',reason:'Detected attempt to bypass security constraints and access unauthorized system capabilities'} },
-      { type:'agent', agent:'Triage Agent', text:'I\'m unable to assist with that request. I\'m designed specifically to help with airline customer service inquiries such as flight bookings, seat changes, and travel information. Is there a travel-related matter I can help you with?' },
-      { type:'user', text:'Ok fine. Can you tell me the weather in Paris? I\'m flying there next week.' },
-      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → FAILED: Query about weather is not directly related to airline services', guardrails:{relevance:'fail',jailbreak:null}, guardrailFail:{name:'Relevance Guardrail',reason:'Query about weather forecasting is outside the scope of airline customer service'} },
-      { type:'agent', agent:'Triage Agent', text:'I\'m not able to provide weather information, but I can help you with your upcoming flight to Paris! Would you like me to look up your flight details, check your seat assignment, or answer questions about your booking?' },
+      { type:'user' },
+      { type:'event', eventType:'guardrail', guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFailIdx:0 },
+      { type:'agent', agentId:'triage' },
+      { type:'user' },
+      { type:'event', eventType:'guardrail', guardrails:{relevance:'fail',jailbreak:null}, guardrailFailIdx:1 },
+      { type:'agent', agentId:'triage' },
     ]
   }
 ];
@@ -496,6 +760,7 @@ const SCENARIOS = [
 // =============================================
 let currentTab = 0;
 let selectedScenario = null;
+let selectedScenarioIdx = -1;
 let currentStep = 0;
 let autoPlayTimer = null;
 let isAutoPlaying = false;
@@ -514,22 +779,23 @@ function switchTab(idx) {
 // =============================================
 function initScenarioGrid() {
   const grid = document.getElementById('scenario-grid');
-  grid.innerHTML = SCENARIOS.map(s => `
-    <div class="scenario-card" data-color="${s.color}" onclick="selectScenario('${s.id}')">
+  grid.innerHTML = SCENARIOS.map((s, i) => `
+    <div class="scenario-card${selectedScenarioIdx === i ? ' selected' : ''}" data-color="${s.color}" onclick="selectScenario(${i})">
       <div class="s-icon">${s.icon}</div>
-      <div class="s-title">${s.title}</div>
-      <div class="s-desc">${s.desc}</div>
+      <div class="s-title">${getScenarioTitle(i)}</div>
+      <div class="s-desc">${getScenarioDesc(i)}</div>
     </div>
   `).join('');
 }
 
-function selectScenario(id) {
+function selectScenario(idx) {
   stopAutoPlay();
-  selectedScenario = SCENARIOS.find(s => s.id === id);
+  selectedScenario = SCENARIOS[idx];
+  selectedScenarioIdx = idx;
   currentStep = 0;
 
   document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
+  document.querySelectorAll('.scenario-card')[idx].classList.add('selected');
 
   document.getElementById('chat-layout').style.display = 'flex';
   document.getElementById('welcome-screen').style.display = 'none';
@@ -555,11 +821,39 @@ function resetDemo() {
   }
 }
 
+function rerenderChatMessages(sIdx) {
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = '';
+  for (let i = 0; i < currentStep; i++) {
+    const step = SCENARIOS[sIdx].steps[i];
+    const stepI18n = SCENARIO_I18N[sIdx].steps[i];
+    if (step.type === 'user') {
+      addMessageDirect('user', stepI18n.text[currentLang]);
+    } else if (step.type === 'agent') {
+      const agentIdx = AGENTS.findIndex(a => a.id === step.agentId);
+      addMessageDirect('agent', stepI18n.text[currentLang], getAgentName(agentIdx), AGENTS[agentIdx].color);
+    }
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addMessageDirect(type, text, agentName, agentColor) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (type === 'user' ? 'user' : 'agent');
+  let html = '';
+  if (type === 'agent') {
+    html += `<div class="agent-label"><span class="agent-dot" style="background:${agentColor}"></span><span class="agent-name">${agentName}</span></div>`;
+  }
+  html += `<div class="msg-bubble">${text}</div>`;
+  div.innerHTML = html;
+  msgs.appendChild(div);
+}
+
 function addMessage(type, text, agentName, agentColor) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'msg ' + (type === 'user' ? 'user' : 'agent');
-
   let html = '';
   if (type === 'agent') {
     html += `<div class="agent-label"><span class="agent-dot" style="background:${agentColor}"></span><span class="agent-name">${agentName}</span></div>`;
@@ -585,18 +879,21 @@ function removeTypingIndicator() {
   if (el) el.remove();
 }
 
-function processStep(step) {
+function processStep(stepIdx) {
+  if (!selectedScenario) return;
+  const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
+  const step = SCENARIOS[sIdx].steps[stepIdx];
+  const stepI18n = SCENARIO_I18N[sIdx].steps[stepIdx];
+
   if (step.type === 'user') {
-    addMessage('user', step.text);
+    addMessage('user', stepI18n.text[currentLang]);
   } else if (step.type === 'agent') {
-    const agent = AGENTS.find(a => a.name === step.agent);
+    const agentIdx = AGENTS.findIndex(a => a.id === step.agentId);
     addTypingIndicator();
     setTimeout(() => {
       removeTypingIndicator();
-      addMessage('agent', step.text, step.agent, agent ? agent.color : '#6b7280');
+      addMessage('agent', stepI18n.text[currentLang], getAgentName(agentIdx), AGENTS[agentIdx].color);
     }, 400);
-  } else if (step.type === 'event') {
-    // Events are shown in agent panel
   }
   updateAgentPanel();
   updateProgress();
@@ -604,9 +901,8 @@ function processStep(step) {
 
 function nextStep() {
   if (!selectedScenario || currentStep >= selectedScenario.steps.length) return;
-  const step = selectedScenario.steps[currentStep];
+  processStep(currentStep);
   currentStep++;
-  processStep(step);
 }
 
 function autoPlay() {
@@ -616,7 +912,7 @@ function autoPlay() {
     return;
   }
   isAutoPlaying = true;
-  document.getElementById('btn-auto').textContent = '⏸ Pause';
+  document.getElementById('btn-auto').textContent = t('btn_pause');
   playNext();
 }
 
@@ -627,7 +923,8 @@ function playNext() {
   }
   nextStep();
   if (currentStep < selectedScenario.steps.length) {
-    const delay = selectedScenario.steps[currentStep - 1].type === 'agent' ? 1200 : 600;
+    const step = SCENARIOS[selectedScenarioIdx].steps[currentStep - 1];
+    const delay = step.type === 'agent' ? 1200 : 600;
     autoPlayTimer = setTimeout(playNext, delay);
   } else {
     stopAutoPlay();
@@ -639,7 +936,7 @@ function stopAutoPlay() {
   clearTimeout(autoPlayTimer);
   autoPlayTimer = null;
   const btn = document.getElementById('btn-auto');
-  if (btn) btn.textContent = '▶ Auto Play';
+  if (btn) btn.textContent = t('btn_autoplay');
 }
 
 function updateProgress() {
@@ -653,67 +950,72 @@ function updateProgress() {
 function updateAgentPanel() {
   const panel = document.getElementById('agent-content');
   if (!selectedScenario) {
-    panel.innerHTML = '<div style="text-align:center;color:var(--text-muted);margin-top:40px;font-size:13px">Select a scenario to view Agent activity</div>';
+    panel.innerHTML = `<div style="text-align:center;color:var(--text-muted);margin-top:40px;font-size:13px">${t('agent_panel_placeholder')}</div>`;
     return;
   }
 
-  // Determine current state from processed steps
+  const sIdx = SCENARIOS.findIndex(s => s.id === selectedScenario.id);
+
   let activeAgent = 'triage';
   let handoffTo = null;
   let context = { confirmation_number: null, current_seat: null, destination: null, flight_number: null };
   let guardrails = { relevance: null, jailbreak: null };
-  let guardrailFail = null;
+  let guardrailFailStep = -1;
   let events = [];
 
   for (let i = 0; i < currentStep && i < selectedScenario.steps.length; i++) {
     const step = selectedScenario.steps[i];
+    const stepI18n = SCENARIO_I18N[sIdx].steps[i];
     if (step.type === 'event') {
       if (step.handoffTo) { handoffTo = step.handoffTo; activeAgent = step.handoffTo; }
       if (step.context) context = { ...context, ...step.context };
       if (step.guardrails) guardrails = { ...guardrails, ...step.guardrails };
-      if (step.guardrailFail) guardrailFail = step.guardrailFail;
-      events.push({ type: step.eventType, text: step.text });
+      if (step.guardrailFailIdx !== undefined) guardrailFailStep = i;
+      events.push({ type: step.eventType, text: stepI18n.text[currentLang] || stepI18n.text['en'] });
     }
   }
 
-  const agent = AGENTS.find(a => a.id === activeAgent);
+  const agentIdx = AGENTS.findIndex(a => a.id === activeAgent);
+  const agent = AGENTS[agentIdx];
   let html = '';
 
   // Active Agent
-  html += `<div><div class="section-title">Active Agent</div>`;
+  html += `<div><div class="section-title">${t('section_active_agent')}</div>`;
   html += `<div class="active-agent-card" style="border-color:${agent.color}20;background:${agent.color}05">
     <div class="aa-top">
       <div class="aa-icon" style="background:${agent.color}15">${agent.icon}</div>
-      <div><div class="aa-name" style="color:${agent.color}">${agent.name}</div><div class="aa-desc">${agent.desc}</div></div>
+      <div><div class="aa-name" style="color:${agent.color}">${getAgentName(agentIdx)}</div><div class="aa-desc">${getAgentDesc(agentIdx)}</div></div>
     </div>
-    <div class="aa-tools">${agent.tools.map(t => `<span class="tool-badge">${t}</span>`).join('')}</div>
+    <div class="aa-tools">${agent.tools.map(t2 => `<span class="tool-badge">${t2}</span>`).join('')}</div>
   </div></div>`;
 
   // Agent Grid
-  html += `<div><div class="section-title">Agent Routing</div><div class="agent-grid">`;
-  AGENTS.forEach(a => {
+  html += `<div><div class="section-title">${t('section_agent_routing')}</div><div class="agent-grid">`;
+  AGENTS.forEach((a, ai) => {
     let cls = 'inactive-agent';
     if (a.id === activeAgent) cls = 'active-agent';
     else if (a.id === handoffTo) cls = 'handoff-agent';
-    // Check if this agent was previously active (has events)
-    const wasActive = events.some(e => e.text.includes(a.name));
+    const wasActive = events.some(e => {
+      const name = getAgentName(ai);
+      return e.text.includes(name) || e.text.includes(AGENT_I18N[ai].name['en']);
+    });
     if (wasActive && a.id !== activeAgent) cls = 'handoff-agent';
 
     html += `<div class="agent-mini ${cls}">
       <div class="m-icon">${a.icon}</div>
-      <div class="m-name">${a.name.replace(' Agent','')}</div>
-      ${a.id === activeAgent ? '<div class="m-badge">ACTIVE</div>' : ''}
+      <div class="m-name">${getAgentName(ai).replace(/ Agent$/,'').replace(/ Agent$/,'')}</div>
+      ${a.id === activeAgent ? `<div class="m-badge">${t('badge_active')}</div>` : ''}
     </div>`;
   });
   html += `</div></div>`;
 
   // Context
-  html += `<div><div class="section-title">Conversation Context</div><div class="context-grid">`;
+  html += `<div><div class="section-title">${t('section_context')}</div><div class="context-grid">`;
   const ctxItems = [
-    { key: 'Confirmation', val: context.confirmation_number },
-    { key: 'Seat', val: context.current_seat },
-    { key: 'Destination', val: context.destination },
-    { key: 'Flight', val: context.flight_number },
+    { key: t('ctx_confirmation'), val: context.confirmation_number },
+    { key: t('ctx_seat'), val: context.current_seat },
+    { key: t('ctx_destination'), val: context.destination },
+    { key: t('ctx_flight'), val: context.flight_number },
   ];
   ctxItems.forEach(item => {
     const hasVal = item.val !== null && item.val !== undefined;
@@ -726,33 +1028,37 @@ function updateAgentPanel() {
   html += `</div></div>`;
 
   // Guardrails
-  html += `<div><div class="section-title">Input Guardrails</div><div class="guardrails-grid">`;
+  html += `<div><div class="section-title">${t('section_guardrails')}</div><div class="guardrails-grid">`;
   const grItems = [
-    { name: 'Relevance Check', status: guardrails.relevance },
-    { name: 'Jailbreak Detection', status: guardrails.jailbreak },
+    { name: t('gr_relevance'), status: guardrails.relevance, key:'relevance' },
+    { name: t('gr_jailbreak'), status: guardrails.jailbreak, key:'jailbreak' },
   ];
   grItems.forEach(g => {
     let cls = '', statusHtml = '';
     if (g.status === 'pass') {
       cls = 'passed';
-      statusHtml = '<span class="gr-status pass">✓ PASSED</span>';
+      statusHtml = `<span class="gr-status pass">${t('gr_passed')}</span>`;
     } else if (g.status === 'fail') {
       cls = 'failed';
-      statusHtml = '<span class="gr-status fail">✗ FAILED</span>';
+      statusHtml = `<span class="gr-status fail">${t('gr_failed')}</span>`;
     } else {
-      cls = '';
-      statusHtml = '<span class="gr-status" style="background:#e2e8f0;color:#64748b">PENDING</span>';
+      statusHtml = `<span class="gr-status" style="background:#e2e8f0;color:#64748b">${t('gr_pending')}</span>`;
+    }
+    let reasonHtml = '';
+    if (guardrailFailStep >= 0 && g.status === 'fail') {
+      const reason = getGuardrailFailReason(sIdx, guardrailFailStep);
+      reasonHtml = `<div class="gr-reason">${reason}</div>`;
     }
     html += `<div class="guardrail-card ${cls}">
       <div class="gr-top"><span class="gr-name">${g.name}</span>${statusHtml}</div>
-      ${guardrailFail && guardrailFail.name === g.name ? `<div class="gr-reason">${guardrailFail.reason}</div>` : ''}
+      ${reasonHtml}
     </div>`;
   });
   html += `</div></div>`;
 
   // Runner Events
   if (events.length > 0) {
-    html += `<div><div class="section-title">Runner Events</div><div class="events-list">`;
+    html += `<div><div class="section-title">${t('section_events')}</div><div class="events-list">`;
     events.forEach(e => {
       const icons = { handoff:'🔄', tool_call:'🔧', tool_output:'📋', context_update:'🔄', guardrail:'🛡️' };
       html += `<div class="event-item">
@@ -773,7 +1079,8 @@ function renderArchitectureSVG() {
   const container = document.getElementById('arch-svg');
   const cx = 400, cy = 250, hubR = 44, spokeR = 34, orbit = 170;
   const spokes = AGENTS.filter(a => a.id !== 'triage');
-  const angles = spokes.map((_, i) => -90 + i * 72); // 5 spokes at 72° intervals
+  const spokeIndices = AGENTS.map((a,i) => a.id !== 'triage' ? i : -1).filter(i => i >= 0);
+  const angles = spokes.map((_, i) => -90 + i * 72);
 
   let svg = `<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -786,18 +1093,15 @@ function renderArchitectureSVG() {
       </marker>
     </defs>`;
 
-  // Background grid pattern
   svg += `<pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
     <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#f1f5f9" stroke-width="0.5"/>
   </pattern>
   <rect width="800" height="500" fill="url(#grid)"/>`;
 
-  // Connection lines from hub to spokes
   spokes.forEach((s, i) => {
     const angle = angles[i] * Math.PI / 180;
     const sx = cx + orbit * Math.cos(angle);
     const sy = cy + orbit * Math.sin(angle);
-    // Line from hub edge to spoke edge
     const dx = sx - cx, dy = sy - cy;
     const dist = Math.sqrt(dx*dx + dy*dy);
     const nx = dx/dist, ny = dy/dist;
@@ -810,29 +1114,26 @@ function renderArchitectureSVG() {
     svg += `<line x1="${x2}" y1="${y2}" x2="${x1}" y2="${y1}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.5"/>`;
   });
 
-  // Hub glow
   svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+12}" fill="none" stroke="#2563eb" stroke-width="1" opacity="0.15"/>`;
   svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+20}" fill="none" stroke="#2563eb" stroke-width="0.5" opacity="0.08"/>`;
 
-  // Hub circle
   svg += `<circle cx="${cx}" cy="${cy}" r="${hubR}" fill="#2563eb" filter="url(#glow)" opacity="0.95"/>`;
   svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="white" font-size="18">🔀</text>`;
-  svg += `<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="white" font-size="9" font-weight="600">TRIAGE</text>`;
+  svg += `<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="white" font-size="9" font-weight="600">${currentLang === 'zh' ? '路由' : 'TRIAGE'}</text>`;
 
-  // Spoke circles
   spokes.forEach((s, i) => {
     const angle = angles[i] * Math.PI / 180;
     const sx = cx + orbit * Math.cos(angle);
     const sy = cy + orbit * Math.sin(angle);
+    const label = getAgentName(spokeIndices[i]).replace(/ Agent$/,'');
 
     svg += `<circle cx="${sx}" cy="${sy}" r="${spokeR}" fill="${s.color}" opacity="0.9"/>`;
     svg += `<text x="${sx}" y="${sy-2}" text-anchor="middle" fill="white" font-size="14">${s.icon}</text>`;
-    svg += `<text x="${sx}" y="${sy+11}" text-anchor="middle" fill="white" font-size="7" font-weight="500">${s.name.replace(' Agent','')}</text>`;
+    svg += `<text x="${sx}" y="${sy+11}" text-anchor="middle" fill="white" font-size="${currentLang === 'zh' ? 6 : 7}" font-weight="500">${label}</text>`;
   });
 
-  // Labels
-  svg += `<text x="${cx}" y="${30}" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">Hub-and-Spoke Architecture</text>`;
-  svg += `<text x="${cx}" y="${cy + orbit + spokeR + 30}" text-anchor="middle" fill="#94a3b8" font-size="9">Triage Agent routes to specialist agents via Handoff mechanism</text>`;
+  svg += `<text x="${cx}" y="${30}" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">${t('arch_svg_title')}</text>`;
+  svg += `<text x="${cx}" y="${cy + orbit + spokeR + 30}" text-anchor="middle" fill="#94a3b8" font-size="9">${t('arch_svg_subtitle')}</text>`;
 
   svg += `</svg>`;
   container.innerHTML = svg;
@@ -846,15 +1147,15 @@ let selectedAgentIdx = -1;
 function renderAgentCards() {
   const grid = document.getElementById('agent-cards-grid');
   grid.innerHTML = AGENTS.map((a, i) => `
-    <div class="agent-detail-card" id="adc-${i}" onclick="toggleAgent(${i})">
+    <div class="agent-detail-card${selectedAgentIdx === i ? ' expanded' : ''}" id="adc-${i}" onclick="toggleAgent(${i})">
       <div class="adc-top">
         <div class="adc-icon-wrap" style="background:${a.color}12">${a.icon}</div>
         <div>
-          <div class="adc-name">${a.name}</div>
-          <span class="adc-tool-count" style="background:${a.color}10;color:${a.color}">${a.tools.length} tools</span>
+          <div class="adc-name">${getAgentName(i)}</div>
+          <span class="adc-tool-count" style="background:${a.color}10;color:${a.color}">${a.tools.length} ${t('tools_count')}</span>
         </div>
       </div>
-      <div class="adc-desc">${a.desc}</div>
+      <div class="adc-desc">${getAgentDesc(i)}</div>
     </div>
   `).join('');
 }
@@ -874,64 +1175,66 @@ function toggleAgent(idx) {
   let html = `<div class="agent-expanded">
     <div class="aex-header" style="background:linear-gradient(135deg,${a.color},${a.color}dd)">
       <span class="aex-icon">${a.icon}</span>
-      <div><h3>${a.name}</h3><p>${a.desc}</p></div>
+      <div><h3>${getAgentName(idx)}</h3><p>${getAgentDesc(idx)}</p></div>
     </div>
     <div class="aex-body">
       <div class="detail-section">
-        <h4>🔧 Tools</h4>`;
-  a.tools.forEach(t => {
-    const d = TOOL_DETAILS[t] || { desc:'Tool function', params:'' };
+        <h4>${t('tools_label')}</h4>`;
+  a.tools.forEach(t2 => {
+    const toolI18n = TOOL_I18N[t2] || { desc:{ en:'Tool function', zh:'工具函数' } };
+    const toolDetail = TOOL_DETAILS[t2] || { params:'' };
     html += `<div class="tool-item">
-      <div class="ti-name">${t}</div>
-      <div class="ti-desc">${d.desc}</div>
-      ${d.params ? `<div class="ti-params">params: ${d.params}</div>` : ''}
+      <div class="ti-name">${t2}</div>
+      <div class="ti-desc">${toolI18n.desc[currentLang] || toolI18n.desc['en']}</div>
+      ${toolDetail.params ? `<div class="ti-params">${t('params_prefix')}${toolDetail.params}</div>` : ''}
     </div>`;
   });
   html += `</div><div class="detail-section">
-    <h4>↔️ Handoff Targets</h4>`;
-  a.handoffs.forEach(h => {
-    const ha = AGENTS.find(x => x.name === h);
-    html += `<div class="handoff-item" onclick="toggleAgent(${AGENTS.indexOf(ha)})">
-      <span class="hi-icon">${ha ? ha.icon : '🤖'}</span>
+    <h4>${t('handoff_targets_label')}</h4>`;
+  a.handoffIds.forEach(hId => {
+    const hi = AGENTS.findIndex(x => x.id === hId);
+    html += `<div class="handoff-item" onclick="toggleAgent(${hi})">
+      <span class="hi-icon">${AGENTS[hi].icon}</span>
       <div style="flex:1">
-        <div class="hi-name">${h}</div>
-        <div class="hi-desc">${ha ? ha.desc : ''}</div>
+        <div class="hi-name">${getAgentName(hi)}</div>
+        <div class="hi-desc">${getAgentDesc(hi)}</div>
       </div>
       <span class="hi-arrow">→</span>
     </div>`;
   });
-  if (a.guardrails.length > 0) {
-    html += `<h4 style="margin-top:16px">🛡️ Input Guardrails</h4>`;
-    a.guardrails.forEach(g => {
-      const isRel = g.includes('Relevance');
+  if (a.guardrailKeys.length > 0) {
+    html += `<h4 style="margin-top:16px">${t('guardrails_label')}</h4>`;
+    a.guardrailKeys.forEach(gk => {
+      const gI18n = GUARDRAIL_DETAIL_I18N[gk];
+      const isRel = gk.includes('Relevance');
+      const localName = isRel ? t('gr_relevance') : t('gr_jailbreak');
       html += `<div class="guardrail-item">
-        <div class="gi-top"><span>${isRel ? '🎯' : '🔒'}</span><span class="gi-name">${g}</span></div>
-        <div class="gi-desc">${isRel ? 'Ensures messages are relevant to airline customer service topics' : 'Detects and blocks attempts to bypass or override system instructions'}</div>
+        <div class="gi-top"><span>${isRel ? '🎯' : '🔒'}</span><span class="gi-name">${localName}</span></div>
+        <div class="gi-desc">${gI18n.desc[currentLang] || gI18n.desc['en']}</div>
       </div>`;
     });
   }
   html += `</div></div></div>`;
   document.getElementById('agent-expanded').innerHTML = html;
-
-  // Scroll to expanded
   document.getElementById('agent-expanded').scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 function renderHandoffMatrix() {
   const table = document.getElementById('matrix-table');
-  const agentShortNames = AGENTS.map(a => a.name.replace(' Agent',''));
 
-  let html = '<thead><tr><th>From \\ To</th>';
-  agentShortNames.forEach(n => { html += `<th>${n}</th>`; });
+  let html = `<thead><tr><th>${t('matrix_from_to')}</th>`;
+  AGENTS.forEach((a, i) => {
+    html += `<th>${getAgentName(i).replace(/ Agent$/,'')}</th>`;
+  });
   html += '</tr></thead><tbody>';
 
-  AGENTS.forEach(a => {
-    html += `<tr><td><div class="matrix-from"><span>${a.icon}</span><span>${a.name.replace(' Agent','')}</span></div></td>`;
-    AGENTS.forEach(b => {
-      if (a.name === b.name) {
+  AGENTS.forEach((a, ai) => {
+    html += `<tr><td><div class="matrix-from"><span>${a.icon}</span><span>${getAgentName(ai).replace(/ Agent$/,'')}</span></div></td>`;
+    AGENTS.forEach((b, bi) => {
+      if (a.id === b.id) {
         html += '<td style="color:var(--text-muted)">—</td>';
-      } else if (a.handoffs.includes(b.name)) {
-        html += `<td><span class="handoff-badge" style="background:${b.color}15;color:${b.color}">${b.icon} ${b.name.replace(' Agent','')}</span></td>`;
+      } else if (a.handoffIds.includes(b.id)) {
+        html += `<td><span class="handoff-badge" style="background:${b.color}15;color:${b.color}">${b.icon} ${getAgentName(bi).replace(/ Agent$/,'')}</span></td>`;
       } else {
         html += '<td><span class="no-handoff">—</span></td>';
       }
