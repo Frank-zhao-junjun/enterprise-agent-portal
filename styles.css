@@ -407,6 +407,7 @@ h1 {
 }
 .value-grid span, .info-list dt { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .value-grid strong { font-size: 18px; }
+.value-grid p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.68; }
 .metric-grid { margin-bottom: 12px; }
 .pilot-note {
   border: 1px solid var(--line);
