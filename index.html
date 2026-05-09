@@ -1,33 +1,956 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="扣子编程，你的 AI 开发伙伴已就位" />
-    <title>扣子编程 - AI 开发伙伴</title>
-    <link rel="stylesheet" href="/styles/main.css" />
-  </head>
-  <body>
-    <div id="app">
-      <main class="main-wrapper">
-        <div class="content-container">
-          <img
-            src="https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze-coding/icon/coze-coding.gif"
-            alt="扣子编程 Logo"
-            class="logo-image"
-          />
-          <div>
-            <div class="text-container">
-              <h1 class="heading">
-                应用开发中
-              </h1>
-              <p class="description">
-                请稍后，页面即将呈现
-              </p>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Airlines Agent Demo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+<style>
+/* === RESET & BASE === */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#2563eb;--blue-light:#3b82f6;--blue-dark:#1d4ed8;
+  --green:#059669;--purple:#7c3aed;--red:#dc2626;--orange:#d97706;--cyan:#0891b2;
+  --bg:#f8fafc;--surface:#ffffff;--border:#e2e8f0;--border-light:#f1f5f9;
+  --text:#0f172a;--text-sec:#475569;--text-muted:#94a3b8;
+  --radius:12px;--radius-sm:8px;--radius-xs:6px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* === HEADER === */
+.header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:14px 24px;position:sticky;top:0;z-index:50}
+.header-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.header-icon{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;backdrop-filter:blur(4px)}
+.header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.header p{color:#bfdbfe;font-size:12px;margin-top:1px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.header-badge{font-size:11px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:999px;backdrop-filter:blur(4px)}
+.header-link{color:#bfdbfe;text-decoration:none;font-size:12px;transition:color .2s}
+.header-link:hover{color:#fff}
+
+/* === TABS === */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:40}
+.tabs-inner{max-width:1400px;margin:0 auto;display:flex;gap:2px;padding:0 24px}
+.tab-btn{padding:12px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-muted);transition:all .2s;position:relative}
+.tab-btn:hover{color:var(--text-sec);background:var(--border-light)}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn svg{width:14px;height:14px;vertical-align:-2px;margin-right:6px}
+
+/* === MAIN === */
+.main{max-width:1400px;margin:0 auto;padding:20px 24px}
+.tab-content{display:none;animation:fadeIn .3s ease}
+.tab-content.active{display:block}
+
+/* === TAB1: INTERACTIVE DEMO === */
+.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:780px;margin:0 auto 20px}
+.scenario-card{padding:20px;background:var(--surface);border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;text-align:left;transition:all .2s;position:relative;overflow:hidden}
+.scenario-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:0;transition:opacity .2s}
+.scenario-card:hover{border-color:var(--blue);box-shadow:var(--shadow-md)}
+.scenario-card:hover::before{opacity:1}
+.scenario-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.scenario-card.selected::before{opacity:1}
+.scenario-card[data-color="blue"]::before{background:var(--blue)}
+.scenario-card[data-color="green"]::before{background:var(--green)}
+.scenario-card[data-color="red"]::before{background:var(--red)}
+.scenario-card .s-icon{font-size:28px;margin-bottom:10px}
+.scenario-card .s-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px}
+.scenario-card .s-desc{font-size:12px;color:var(--text-sec);line-height:1.4}
+.scenario-card.selected .s-title{color:var(--blue)}
+
+.chat-layout{display:flex;gap:16px;height:calc(100vh - 260px);min-height:480px}
+.chat-panel{flex:1;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.agent-panel{width:400px;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+
+.panel-header{padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.panel-header.chat-h{background:var(--blue);color:#fff}
+.panel-header.agent-h{background:linear-gradient(135deg,#1e293b,#334155);color:#fff}
+.panel-header h3{font-size:13px;font-weight:600;flex:1}
+.panel-actions{display:flex;gap:5px}
+.action-btn{font-size:11px;background:rgba(255,255,255,.15);border:none;color:#fff;padding:4px 10px;border-radius:var(--radius-xs);cursor:pointer;transition:all .2s;font-weight:500}
+.action-btn:hover{background:rgba(255,255,255,.25)}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
+.action-btn.primary{background:rgba(255,255,255,.25)}
+.action-btn.primary:hover{background:rgba(255,255,255,.35)}
+
+.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f8fafc}
+.msg{display:flex;animation:fadeIn .3s ease}
+.msg.user{justify-content:flex-end}
+.msg.agent{justify-content:flex-start}
+.msg-bubble{max-width:78%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.msg.user .msg-bubble{background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+.msg.agent .msg-bubble{background:var(--surface);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;box-shadow:var(--shadow-sm)}
+.agent-label{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.agent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.agent-name{font-size:11px;color:var(--text-muted);font-weight:500}
+
+.typing-indicator{display:flex;gap:4px;padding:10px 16px;align-items:center}
+.typing-indicator span{width:7px;height:7px;background:#94a3b8;border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out}
+.typing-indicator span:nth-child(2){animation-delay:.2s}
+.typing-indicator span:nth-child(3){animation-delay:.4s}
+
+.progress-bar{padding:8px 16px;background:var(--surface);border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.progress-track{flex:1;background:#e2e8f0;border-radius:999px;height:5px}
+.progress-fill{background:var(--blue);height:5px;border-radius:999px;transition:width .4s ease}
+.progress-text{font-size:10px;color:var(--text-muted);min-width:60px;text-align:right}
+
+/* Agent panel content */
+.agent-content{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;background:#f8fafc}
+.section-title{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+
+.active-agent-card{padding:12px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--surface);animation:fadeIn .3s}
+.active-agent-card .aa-top{display:flex;align-items:center;gap:10px}
+.active-agent-card .aa-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.active-agent-card .aa-name{font-size:14px;font-weight:600}
+.active-agent-card .aa-desc{font-size:11px;color:var(--text-sec)}
+.active-agent-card .aa-tools{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.tool-badge{font-size:10px;background:#f1f5f9;color:var(--text-sec);padding:2px 7px;border-radius:4px;border:1px solid var(--border-light)}
+
+.agent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.agent-mini{padding:7px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border);text-align:center;background:var(--surface);transition:all .25s;cursor:default}
+.agent-mini.active-agent{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.15);background:#eff6ff}
+.agent-mini.handoff-agent{opacity:.85;border-style:dashed;border-color:#94a3b8}
+.agent-mini.inactive-agent{opacity:.3;filter:grayscale(1)}
+.agent-mini .m-icon{font-size:15px}
+.agent-mini .m-name{font-size:8px;font-weight:600;color:var(--text-sec);line-height:1.2;margin-top:2px}
+.agent-mini .m-badge{display:inline-block;margin-top:3px;font-size:7px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:999px;font-weight:500}
+
+.context-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.context-item{display:flex;align-items:center;gap:5px;padding:5px 7px;background:var(--surface);border-radius:var(--radius-xs);border:1px solid var(--border-light)}
+.ctx-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.ctx-dot.on{background:var(--blue-light)}.ctx-dot.off{background:#d1d5db}
+.ctx-key{font-size:10px;color:var(--text-muted)}
+.ctx-val{font-size:10px;color:var(--text);font-weight:500}
+.ctx-val.null-val{color:#d1d5db;font-style:italic}
+
+.guardrails-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.guardrail-card{padding:8px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);transition:all .3s}
+.guardrail-card.passed{border-color:#86efac;background:#f0fdf4}
+.guardrail-card.failed{border-color:#fca5a5;background:#fef2f2}
+.gr-top{display:flex;align-items:center;gap:5px}
+.gr-name{font-size:10px;font-weight:600;color:var(--text)}
+.gr-status{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 6px;border-radius:999px;color:#fff;font-weight:500}
+.gr-status.pass{background:#10b981}.gr-status.fail{background:#ef4444}
+.gr-reason{margin-top:3px;font-size:9px;color:#b91c1c;line-height:1.3}
+
+.events-list{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto}
+.event-item{display:flex;align-items:flex-start;gap:7px;padding:7px 8px;background:var(--surface);border-radius:var(--radius-xs);border:1px solid var(--border-light);font-size:11px;animation:slideIn .3s}
+.event-badge{padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.event-badge.handoff{background:#f3e8ff;color:var(--purple)}
+.event-badge.tool_call{background:#fef3c7;color:#92400e}
+.event-badge.tool_output{background:#d1fae5;color:#065f46}
+.event-badge.context_update{background:#dbeafe;color:#1e40af}
+.event-badge.guardrail{background:#fee2e2;color:#991b1b}
+.event-text{color:var(--text-sec);line-height:1.3;min-width:0;word-break:break-word}
+
+.welcome-screen{text-align:center;margin-top:60px;color:var(--text-muted)}
+.welcome-screen .w-icon{font-size:48px;margin-bottom:10px;opacity:.6}
+.welcome-screen h3{font-size:17px;font-weight:600;color:var(--text-sec)}
+.welcome-screen p{font-size:13px;margin-top:4px}
+
+/* === TAB2: ARCHITECTURE === */
+.arch-section{margin-bottom:32px}
+.arch-section h2{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
+.arch-section .arch-desc{font-size:13px;color:var(--text-sec);margin-bottom:16px}
+
+.svg-container{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:24px;overflow:hidden;margin-bottom:24px}
+.svg-container svg{width:100%;height:auto;display:block}
+
+.concept-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.concept-card{padding:20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);transition:all .2s}
+.concept-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.concept-card .cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
+.concept-card h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.concept-card p{font-size:12px;color:var(--text-sec);line-height:1.5}
+
+.flow-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;position:relative}
+.flow-step{padding:16px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);text-align:center;position:relative;transition:all .2s}
+.flow-step:hover{box-shadow:var(--shadow-md)}
+.flow-step .step-num{width:28px;height:28px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin:0 auto 8px}
+.flow-step h4{font-size:13px;font-weight:600;margin-bottom:4px}
+.flow-step p{font-size:11px;color:var(--text-sec);line-height:1.4}
+.flow-arrow{position:absolute;right:-9px;top:50%;transform:translateY(-50%);z-index:2;color:var(--blue);font-size:16px}
+
+.tech-stack{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.tech-item{padding:8px 16px;background:var(--surface);border-radius:999px;border:1px solid var(--border);font-size:12px;color:var(--text-sec);display:flex;align-items:center;gap:6px;transition:all .2s}
+.tech-item:hover{border-color:var(--blue);color:var(--blue)}
+.tech-item .tech-dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+
+/* === TAB3: AGENT DETAILS === */
+.agent-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.agent-detail-card{padding:16px;background:var(--surface);border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;transition:all .2s}
+.agent-detail-card:hover{box-shadow:var(--shadow-md);border-color:var(--blue-light)}
+.agent-detail-card.expanded{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.adc-top{display:flex;align-items:center;gap:10px}
+.adc-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.adc-name{font-size:14px;font-weight:600}
+.adc-tool-count{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500}
+.adc-desc{font-size:12px;color:var(--text-sec);margin-top:8px;line-height:1.4}
+
+.agent-expanded{margin-bottom:20px;animation:fadeIn .3s}
+.aex-header{padding:16px;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:12px;color:#fff}
+.aex-header .aex-icon{font-size:24px}
+.aex-header h3{font-size:16px;font-weight:700}
+.aex-header p{font-size:12px;opacity:.85}
+.aex-body{padding:20px;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.detail-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tool-item{padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px}
+.tool-item .ti-name{font-size:13px;font-weight:600;color:var(--text);font-family:'SF Mono',Monaco,Consolas,monospace}
+.tool-item .ti-desc{font-size:11px;color:var(--text-sec);margin-top:3px}
+.tool-item .ti-params{font-size:10px;color:var(--blue);margin-top:3px;font-family:'SF Mono',Monaco,Consolas,monospace}
+.handoff-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px;cursor:pointer;transition:all .2s}
+.handoff-item:hover{background:#eff6ff;border-color:var(--blue-light)}
+.handoff-item .hi-icon{font-size:16px}
+.handoff-item .hi-name{font-size:13px;font-weight:600;flex:1}
+.handoff-item .hi-desc{font-size:10px;color:var(--text-sec)}
+.handoff-item .hi-arrow{color:var(--blue);font-weight:700}
+.guardrail-item{padding:10px 12px;background:#f8fafc;border-radius:var(--radius-sm);border:1px solid var(--border-light);margin-bottom:8px}
+.guardrail-item .gi-top{display:flex;align-items:center;gap:6px}
+.guardrail-item .gi-name{font-size:12px;font-weight:600}
+.guardrail-item .gi-desc{font-size:11px;color:var(--text-sec);margin-top:3px;line-height:1.4}
+
+.handoff-matrix{margin-top:24px}
+.handoff-matrix h2{font-size:16px;font-weight:700;margin-bottom:12px}
+.matrix-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.matrix-table th{padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-sec);background:#f8fafc;border-bottom:1px solid var(--border);text-align:left}
+.matrix-table th:first-child{width:160px}
+.matrix-table td{padding:8px 12px;font-size:11px;border-bottom:1px solid var(--border-light)}
+.matrix-table tr:last-child td{border-bottom:none}
+.matrix-from{display:flex;align-items:center;gap:6px;font-weight:500}
+.handoff-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500}
+.no-handoff{color:var(--text-muted);font-style:italic;font-size:10px}
+
+/* === ANIMATIONS === */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes rotateIn{from{transform:rotate(-10deg) scale(.9);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
+
+/* === RESPONSIVE === */
+@media(max-width:1024px){
+  .chat-layout{flex-direction:column;height:auto}
+  .agent-panel{width:100%;max-height:400px}
+  .scenario-grid{grid-template-columns:1fr}
+  .concept-cards{grid-template-columns:1fr}
+  .flow-steps{grid-template-columns:repeat(2,1fr)}
+  .agent-cards-grid{grid-template-columns:repeat(2,1fr)}
+  .aex-body{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .agent-cards-grid{grid-template-columns:1fr}
+  .flow-steps{grid-template-columns:1fr}
+  .flow-arrow{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-icon">✈️</div>
+    <div>
+      <h1>OpenAI Airlines Agent Demo</h1>
+      <p>Hub-and-Spoke Multi-Agent Architecture with Guardrails</p>
+    </div>
+    <div class="header-right">
+      <span class="header-badge">OpenAI Agents SDK</span>
+      <a href="https://github.com/openai/openai-cs-agents-demo" target="_blank" class="header-link">GitHub ↗</a>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <div class="tabs-inner">
+    <button class="tab-btn active" onclick="switchTab(0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Interactive Demo
+    </button>
+    <button class="tab-btn" onclick="switchTab(1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10A15 15 0 0112 2z"/></svg>
+      Architecture
+    </button>
+    <button class="tab-btn" onclick="switchTab(2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Agent Details
+    </button>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- TAB 1: INTERACTIVE DEMO -->
+  <div class="tab-content active" id="tab-0">
+    <div class="scenario-grid" id="scenario-grid"></div>
+    <div class="chat-layout" id="chat-layout" style="display:none">
+      <!-- Chat Panel -->
+      <div class="chat-panel">
+        <div class="panel-header chat-h">
+          <h3>💬 Customer Chat</h3>
+          <div class="panel-actions">
+            <button class="action-btn primary" id="btn-auto" onclick="autoPlay()" disabled>▶ Auto Play</button>
+            <button class="action-btn" id="btn-next" onclick="nextStep()" disabled>Next Step →</button>
+            <button class="action-btn" id="btn-reset" onclick="resetDemo()">↺ Reset</button>
           </div>
         </div>
-      </main>
+        <div class="messages" id="messages"></div>
+        <div class="progress-bar">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <div class="progress-text" id="progress-text">0 / 0</div>
+        </div>
+      </div>
+      <!-- Agent Panel -->
+      <div class="agent-panel">
+        <div class="panel-header agent-h">
+          <h3>🤖 Agent View</h3>
+        </div>
+        <div class="agent-content" id="agent-content"></div>
+      </div>
     </div>
-  </body>
+    <div class="welcome-screen" id="welcome-screen">
+      <div class="w-icon">✈️</div>
+      <h3>Select a scenario to begin</h3>
+      <p>Choose a preset conversation to see the Agent system in action</p>
+    </div>
+  </div>
+
+  <!-- TAB 2: ARCHITECTURE -->
+  <div class="tab-content" id="tab-1">
+    <div class="arch-section">
+      <h2>Hub-and-Spoke Architecture</h2>
+      <p class="arch-desc">The Triage Agent serves as the central hub, routing customer requests to specialized spoke agents via handoff mechanisms.</p>
+      <div class="svg-container" id="arch-svg"></div>
+    </div>
+
+    <div class="arch-section">
+      <h2>Core Concepts</h2>
+      <div class="concept-cards">
+        <div class="concept-card">
+          <div class="cc-icon" style="background:#eff6ff;color:var(--blue)">🔀</div>
+          <h3>Hub Mechanism</h3>
+          <p>The Triage Agent acts as the central hub that receives all incoming messages, analyzes intent, and routes to the appropriate specialist agent. It maintains conversation context and coordinates handoffs between agents.</p>
+        </div>
+        <div class="concept-card">
+          <div class="cc-icon" style="background:#f3e8ff;color:var(--purple)">🔄</div>
+          <h3>Handoff Mechanism</h3>
+          <p>Agents can transfer control to other agents through structured handoff tools. Each handoff preserves the full conversation context, allowing the receiving agent to seamlessly continue the interaction.</p>
+        </div>
+        <div class="concept-card">
+          <div class="cc-icon" style="background:#fef2f2;color:var(--red)">🛡️</div>
+          <h3>Input Guardrails</h3>
+          <p>Two guardrails protect the system: <strong>Relevance Check</strong> ensures queries relate to airline services; <strong>Jailbreak Detection</strong> blocks attempts to override system instructions or access unauthorized capabilities.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arch-section">
+      <h2>Request Flow</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <h4>User Message</h4>
+          <p>Customer sends a message through the chat interface</p>
+          <span class="flow-arrow">→</span>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <h4>Guardrails Check</h4>
+          <p>Input is validated for relevance and safety before processing</p>
+          <span class="flow-arrow">→</span>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <h4>Agent Processing</h4>
+          <p>Triage Agent routes to the appropriate specialist agent</p>
+          <span class="flow-arrow">→</span>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <h4>Handoff / Response</h4>
+          <p>Agent executes tools and responds, or hands off to another agent</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arch-section">
+      <h2>Technology Stack</h2>
+      <div class="tech-stack">
+        <div class="tech-item"><span class="tech-dot"></span>OpenAI Agents SDK</div>
+        <div class="tech-item"><span class="tech-dot"></span>FastAPI</div>
+        <div class="tech-item"><span class="tech-dot"></span>Next.js + ChatKit</div>
+        <div class="tech-item"><span class="tech-dot"></span>GPT-4o / GPT-5.2</div>
+        <div class="tech-item"><span class="tech-dot"></span>Python 3.12+</div>
+        <div class="tech-item"><span class="tech-dot"></span>TypeScript</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: AGENT DETAILS -->
+  <div class="tab-content" id="tab-2">
+    <div class="arch-section">
+      <h2>Agent Overview</h2>
+      <p class="arch-desc">6 specialized agents work together in a Hub-and-Spoke pattern to handle airline customer service requests.</p>
+    </div>
+    <div class="agent-cards-grid" id="agent-cards-grid"></div>
+    <div class="agent-expanded" id="agent-expanded"></div>
+    <div class="handoff-matrix">
+      <h2>Handoff Relationship Matrix</h2>
+      <table class="matrix-table" id="matrix-table"></table>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// DATA DEFINITIONS
+// =============================================
+
+const AGENTS = [
+  { id:'triage', name:'Triage Agent', icon:'🔀', color:'#2563eb', desc:'Central hub that routes customer requests to the appropriate specialist agent', tools:['get_trip_details'], handoffs:['Flight Information Agent','Booking and Cancellation Agent','Seat and Special Services Agent','FAQ Agent','Refunds and Compensation Agent'], guardrails:['Relevance Guardrail','Jailbreak Guardrail'] },
+  { id:'flight', name:'Flight Information Agent', icon:'✈️', color:'#059669', desc:'Handles flight status inquiries and flight search requests', tools:['flight_status_tool','get_matching_flights'], handoffs:['Triage Agent'], guardrails:[] },
+  { id:'booking', name:'Booking and Cancellation Agent', icon:'🎫', color:'#7c3aed', desc:'Manages flight bookings, cancellations, and itinerary changes', tools:['cancel_flight','get_matching_flights','book_new_flight'], handoffs:['Triage Agent'], guardrails:[] },
+  { id:'seat', name:'Seat and Special Services Agent', icon:'💺', color:'#dc2626', desc:'Handles seat changes, seat map display, and special service assignments', tools:['update_seat','assign_special_service_seat','display_seat_map'], handoffs:['Triage Agent'], guardrails:[] },
+  { id:'faq', name:'FAQ Agent', icon:'❓', color:'#d97706', desc:'Answers frequently asked questions about airline policies and services', tools:['faq_lookup_tool'], handoffs:['Triage Agent'], guardrails:[] },
+  { id:'refunds', name:'Refunds and Compensation Agent', icon:'💰', color:'#0891b2', desc:'Processes refund requests and issues compensation for service issues', tools:['issue_compensation','faq_lookup_tool'], handoffs:['Triage Agent'], guardrails:[] },
+];
+
+const TOOL_DETAILS = {
+  get_trip_details: { desc:'Retrieve trip details using a confirmation number', params:'confirmation_number: str' },
+  flight_status_tool: { desc:'Get the current status of a flight', params:'flight_number: str' },
+  get_matching_flights: { desc:'Search for flights matching given criteria', params:'origin: str, destination: str, date: str' },
+  cancel_flight: { desc:'Cancel a confirmed flight booking', params:'confirmation_number: str, reason: str' },
+  book_new_flight: { desc:'Book a new flight for the customer', params:'origin: str, destination: str, date: str, passenger_name: str' },
+  update_seat: { desc:'Update the seat assignment for a booking', params:'confirmation_number: str, new_seat: str' },
+  assign_special_service_seat: { desc:'Assign a seat that meets special service requirements', params:'confirmation_number: str, service_type: str' },
+  display_seat_map: { desc:'Display the seat map for a given flight', params:'flight_number: str' },
+  faq_lookup_tool: { desc:'Look up answers to frequently asked questions', params:'query: str' },
+  issue_compensation: { desc:'Issue compensation to a customer for service disruptions', params:'confirmation_number: str, amount: float, reason: str' },
+};
+
+const SCENARIOS = [
+  {
+    id:'seat-change', title:'Seat Change', desc:'Customer requests a window seat change for their upcoming flight', icon:'💺', color:'blue',
+    steps:[
+      { type:'user', text:'Hi, I have a flight coming up and I would like to change my seat to a window seat.' },
+      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → PASSED', guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', text:'Context: confirmation_number=ABC123, current_seat=12A', context:{confirmation_number:'ABC123',current_seat:'12A',destination:null,flight_number:null} },
+      { type:'agent', agent:'Triage Agent', text:'I\'d be happy to help you change your seat. Let me look up your trip details first.' },
+      { type:'event', eventType:'tool_call', text:'Triage Agent → get_trip_details(confirmation_number="ABC123")' },
+      { type:'event', eventType:'tool_output', text:'Trip found: UA456 SFO→JFK, Seat 12A (aisle), Dec 15' },
+      { type:'event', eventType:'handoff', text:'Triage Agent → Seat and Special Services Agent', handoffTo:'seat' },
+      { type:'agent', agent:'Seat and Special Services Agent', text:'I found your reservation. You\'re currently in 12A, which is an aisle seat. Let me show you the available window seats on your flight.' },
+      { type:'event', eventType:'tool_call', text:'Seat Agent → display_seat_map(flight_number="UA456")' },
+      { type:'event', eventType:'tool_output', text:'Available window seats: 14A, 16A, 18F' },
+      { type:'agent', agent:'Seat and Special Services Agent', text:'Here are the available window seats: 14A, 16A, and 18F. Which one would you prefer?' },
+      { type:'user', text:'I\'ll take 14A please!' },
+      { type:'event', eventType:'tool_call', text:'Seat Agent → update_seat(confirmation_number="ABC123", new_seat="14A")' },
+      { type:'event', eventType:'tool_output', text:'Seat updated successfully: 12A → 14A' },
+      { type:'agent', agent:'Seat and Special Services Agent', text:'Your seat has been updated to 14A. Is there anything else I can help you with?' },
+    ]
+  },
+  {
+    id:'flight-delay', title:'Flight Delay', desc:'Customer reports a delayed flight and asks for compensation options', icon:'✈️', color:'green',
+    steps:[
+      { type:'user', text:'My flight UA789 has been delayed by 3 hours. This is really frustrating. What are my options?' },
+      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → PASSED', guardrails:{relevance:'pass',jailbreak:null} },
+      { type:'event', eventType:'context_update', text:'Context: flight_number=UA789, delay=3hrs', context:{confirmation_number:null,current_seat:null,destination:null,flight_number:'UA789'} },
+      { type:'agent', agent:'Triage Agent', text:'I\'m sorry to hear about the delay. Let me check your flight status right away.' },
+      { type:'event', eventType:'tool_call', text:'Triage Agent → get_trip_details(confirmation_number inferred from session)' },
+      { type:'event', eventType:'tool_output', text:'Trip found: UA789 LAX→ORD, Delayed 3hrs, original 2:00pm → est 5:00pm' },
+      { type:'event', eventType:'handoff', text:'Triage Agent → Flight Information Agent', handoffTo:'flight' },
+      { type:'agent', agent:'Flight Information Agent', text:'I can confirm that UA789 from LAX to ORD has been delayed by approximately 3 hours. The new estimated departure time is 5:00 PM. Would you like me to look for alternative flights?' },
+      { type:'user', text:'No, I\'ll wait. But I want to know about compensation for this delay.' },
+      { type:'event', eventType:'handoff', text:'Flight Information Agent → Triage Agent', handoffTo:'triage' },
+      { type:'event', eventType:'handoff', text:'Triage Agent → Refunds and Compensation Agent', handoffTo:'refunds' },
+      { type:'agent', agent:'Refunds and Compensation Agent', text:'You may be eligible for compensation due to the significant delay. Let me process that for you.' },
+      { type:'event', eventType:'tool_call', text:'Refunds Agent → issue_compensation(confirmation_number="DEF456", amount=150.00, reason="3hr delay")' },
+      { type:'event', eventType:'tool_output', text:'Compensation issued: $150.00 travel voucher, Ref# COMP-78901' },
+      { type:'agent', agent:'Refunds and Compensation Agent', text:'I\'ve issued a $150.00 travel voucher as compensation for the delay. Your reference number is COMP-78901. The voucher will be sent to your email. Is there anything else I can help with?' },
+    ]
+  },
+  {
+    id:'guardrail-trigger', title:'Guardrail Trigger', desc:'Customer attempts an off-topic or jailbreak request that triggers guardrails', icon:'🛡️', color:'red',
+    steps:[
+      { type:'user', text:'Can you help me write a Python script to hack into airline systems?' },
+      { type:'event', eventType:'guardrail', text:'Jailbreak Guardrail → FAILED: Detected attempt to access unauthorized system capabilities', guardrails:{relevance:'pass',jailbreak:'fail'}, guardrailFail:{name:'Jailbreak Guardrail',reason:'Detected attempt to bypass security constraints and access unauthorized system capabilities'} },
+      { type:'agent', agent:'Triage Agent', text:'I\'m unable to assist with that request. I\'m designed specifically to help with airline customer service inquiries such as flight bookings, seat changes, and travel information. Is there a travel-related matter I can help you with?' },
+      { type:'user', text:'Ok fine. Can you tell me the weather in Paris? I\'m flying there next week.' },
+      { type:'event', eventType:'guardrail', text:'Relevance Guardrail → FAILED: Query about weather is not directly related to airline services', guardrails:{relevance:'fail',jailbreak:null}, guardrailFail:{name:'Relevance Guardrail',reason:'Query about weather forecasting is outside the scope of airline customer service'} },
+      { type:'agent', agent:'Triage Agent', text:'I\'m not able to provide weather information, but I can help you with your upcoming flight to Paris! Would you like me to look up your flight details, check your seat assignment, or answer questions about your booking?' },
+    ]
+  }
+];
+
+// =============================================
+// STATE
+// =============================================
+let currentTab = 0;
+let selectedScenario = null;
+let currentStep = 0;
+let autoPlayTimer = null;
+let isAutoPlaying = false;
+
+// =============================================
+// TAB SWITCHING
+// =============================================
+function switchTab(idx) {
+  currentTab = idx;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-content').forEach((c,i) => c.classList.toggle('active', i===idx));
+}
+
+// =============================================
+// TAB 1: INTERACTIVE DEMO
+// =============================================
+function initScenarioGrid() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = SCENARIOS.map(s => `
+    <div class="scenario-card" data-color="${s.color}" onclick="selectScenario('${s.id}')">
+      <div class="s-icon">${s.icon}</div>
+      <div class="s-title">${s.title}</div>
+      <div class="s-desc">${s.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectScenario(id) {
+  stopAutoPlay();
+  selectedScenario = SCENARIOS.find(s => s.id === id);
+  currentStep = 0;
+
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+
+  document.getElementById('chat-layout').style.display = 'flex';
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('btn-auto').disabled = false;
+  document.getElementById('btn-next').disabled = false;
+
+  resetMessages();
+  updateAgentPanel();
+  updateProgress();
+}
+
+function resetMessages() {
+  document.getElementById('messages').innerHTML = '';
+}
+
+function resetDemo() {
+  stopAutoPlay();
+  currentStep = 0;
+  if (selectedScenario) {
+    resetMessages();
+    updateAgentPanel();
+    updateProgress();
+  }
+}
+
+function addMessage(type, text, agentName, agentColor) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (type === 'user' ? 'user' : 'agent');
+
+  let html = '';
+  if (type === 'agent') {
+    html += `<div class="agent-label"><span class="agent-dot" style="background:${agentColor}"></span><span class="agent-name">${agentName}</span></div>`;
+  }
+  html += `<div class="msg-bubble">${text}</div>`;
+  div.innerHTML = html;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTypingIndicator() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.id = 'typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+function processStep(step) {
+  if (step.type === 'user') {
+    addMessage('user', step.text);
+  } else if (step.type === 'agent') {
+    const agent = AGENTS.find(a => a.name === step.agent);
+    addTypingIndicator();
+    setTimeout(() => {
+      removeTypingIndicator();
+      addMessage('agent', step.text, step.agent, agent ? agent.color : '#6b7280');
+    }, 400);
+  } else if (step.type === 'event') {
+    // Events are shown in agent panel
+  }
+  updateAgentPanel();
+  updateProgress();
+}
+
+function nextStep() {
+  if (!selectedScenario || currentStep >= selectedScenario.steps.length) return;
+  const step = selectedScenario.steps[currentStep];
+  currentStep++;
+  processStep(step);
+}
+
+function autoPlay() {
+  if (!selectedScenario) return;
+  if (isAutoPlaying) {
+    stopAutoPlay();
+    return;
+  }
+  isAutoPlaying = true;
+  document.getElementById('btn-auto').textContent = '⏸ Pause';
+  playNext();
+}
+
+function playNext() {
+  if (!isAutoPlaying || !selectedScenario || currentStep >= selectedScenario.steps.length) {
+    stopAutoPlay();
+    return;
+  }
+  nextStep();
+  if (currentStep < selectedScenario.steps.length) {
+    const delay = selectedScenario.steps[currentStep - 1].type === 'agent' ? 1200 : 600;
+    autoPlayTimer = setTimeout(playNext, delay);
+  } else {
+    stopAutoPlay();
+  }
+}
+
+function stopAutoPlay() {
+  isAutoPlaying = false;
+  clearTimeout(autoPlayTimer);
+  autoPlayTimer = null;
+  const btn = document.getElementById('btn-auto');
+  if (btn) btn.textContent = '▶ Auto Play';
+}
+
+function updateProgress() {
+  if (!selectedScenario) return;
+  const total = selectedScenario.steps.length;
+  const pct = Math.round((currentStep / total) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${currentStep} / ${total}`;
+}
+
+function updateAgentPanel() {
+  const panel = document.getElementById('agent-content');
+  if (!selectedScenario) {
+    panel.innerHTML = '<div style="text-align:center;color:var(--text-muted);margin-top:40px;font-size:13px">Select a scenario to view Agent activity</div>';
+    return;
+  }
+
+  // Determine current state from processed steps
+  let activeAgent = 'triage';
+  let handoffTo = null;
+  let context = { confirmation_number: null, current_seat: null, destination: null, flight_number: null };
+  let guardrails = { relevance: null, jailbreak: null };
+  let guardrailFail = null;
+  let events = [];
+
+  for (let i = 0; i < currentStep && i < selectedScenario.steps.length; i++) {
+    const step = selectedScenario.steps[i];
+    if (step.type === 'event') {
+      if (step.handoffTo) { handoffTo = step.handoffTo; activeAgent = step.handoffTo; }
+      if (step.context) context = { ...context, ...step.context };
+      if (step.guardrails) guardrails = { ...guardrails, ...step.guardrails };
+      if (step.guardrailFail) guardrailFail = step.guardrailFail;
+      events.push({ type: step.eventType, text: step.text });
+    }
+  }
+
+  const agent = AGENTS.find(a => a.id === activeAgent);
+  let html = '';
+
+  // Active Agent
+  html += `<div><div class="section-title">Active Agent</div>`;
+  html += `<div class="active-agent-card" style="border-color:${agent.color}20;background:${agent.color}05">
+    <div class="aa-top">
+      <div class="aa-icon" style="background:${agent.color}15">${agent.icon}</div>
+      <div><div class="aa-name" style="color:${agent.color}">${agent.name}</div><div class="aa-desc">${agent.desc}</div></div>
+    </div>
+    <div class="aa-tools">${agent.tools.map(t => `<span class="tool-badge">${t}</span>`).join('')}</div>
+  </div></div>`;
+
+  // Agent Grid
+  html += `<div><div class="section-title">Agent Routing</div><div class="agent-grid">`;
+  AGENTS.forEach(a => {
+    let cls = 'inactive-agent';
+    if (a.id === activeAgent) cls = 'active-agent';
+    else if (a.id === handoffTo) cls = 'handoff-agent';
+    // Check if this agent was previously active (has events)
+    const wasActive = events.some(e => e.text.includes(a.name));
+    if (wasActive && a.id !== activeAgent) cls = 'handoff-agent';
+
+    html += `<div class="agent-mini ${cls}">
+      <div class="m-icon">${a.icon}</div>
+      <div class="m-name">${a.name.replace(' Agent','')}</div>
+      ${a.id === activeAgent ? '<div class="m-badge">ACTIVE</div>' : ''}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Context
+  html += `<div><div class="section-title">Conversation Context</div><div class="context-grid">`;
+  const ctxItems = [
+    { key: 'Confirmation', val: context.confirmation_number },
+    { key: 'Seat', val: context.current_seat },
+    { key: 'Destination', val: context.destination },
+    { key: 'Flight', val: context.flight_number },
+  ];
+  ctxItems.forEach(item => {
+    const hasVal = item.val !== null && item.val !== undefined;
+    html += `<div class="context-item">
+      <span class="ctx-dot ${hasVal ? 'on' : 'off'}"></span>
+      <span class="ctx-key">${item.key}:</span>
+      <span class="ctx-val ${hasVal ? '' : 'null-val'}">${hasVal ? item.val : 'null'}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Guardrails
+  html += `<div><div class="section-title">Input Guardrails</div><div class="guardrails-grid">`;
+  const grItems = [
+    { name: 'Relevance Check', status: guardrails.relevance },
+    { name: 'Jailbreak Detection', status: guardrails.jailbreak },
+  ];
+  grItems.forEach(g => {
+    let cls = '', statusHtml = '';
+    if (g.status === 'pass') {
+      cls = 'passed';
+      statusHtml = '<span class="gr-status pass">✓ PASSED</span>';
+    } else if (g.status === 'fail') {
+      cls = 'failed';
+      statusHtml = '<span class="gr-status fail">✗ FAILED</span>';
+    } else {
+      cls = '';
+      statusHtml = '<span class="gr-status" style="background:#e2e8f0;color:#64748b">PENDING</span>';
+    }
+    html += `<div class="guardrail-card ${cls}">
+      <div class="gr-top"><span class="gr-name">${g.name}</span>${statusHtml}</div>
+      ${guardrailFail && guardrailFail.name === g.name ? `<div class="gr-reason">${guardrailFail.reason}</div>` : ''}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Runner Events
+  if (events.length > 0) {
+    html += `<div><div class="section-title">Runner Events</div><div class="events-list">`;
+    events.forEach(e => {
+      const icons = { handoff:'🔄', tool_call:'🔧', tool_output:'📋', context_update:'🔄', guardrail:'🛡️' };
+      html += `<div class="event-item">
+        <span class="event-badge ${e.type}">${icons[e.type]||''} ${e.type.replace(/_/g,' ')}</span>
+        <span class="event-text">${e.text}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  panel.innerHTML = html;
+}
+
+// =============================================
+// TAB 2: ARCHITECTURE SVG
+// =============================================
+function renderArchitectureSVG() {
+  const container = document.getElementById('arch-svg');
+  const cx = 400, cy = 250, hubR = 44, spokeR = 34, orbit = 170;
+  const spokes = AGENTS.filter(a => a.id !== 'triage');
+  const angles = spokes.map((_, i) => -90 + i * 72); // 5 spokes at 72° intervals
+
+  let svg = `<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+      </marker>
+    </defs>`;
+
+  // Background grid pattern
+  svg += `<pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#f1f5f9" stroke-width="0.5"/>
+  </pattern>
+  <rect width="800" height="500" fill="url(#grid)"/>`;
+
+  // Connection lines from hub to spokes
+  spokes.forEach((s, i) => {
+    const angle = angles[i] * Math.PI / 180;
+    const sx = cx + orbit * Math.cos(angle);
+    const sy = cy + orbit * Math.sin(angle);
+    // Line from hub edge to spoke edge
+    const dx = sx - cx, dy = sy - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const nx = dx/dist, ny = dy/dist;
+    const x1 = cx + nx * (hubR + 8);
+    const y1 = cy + ny * (hubR + 8);
+    const x2 = sx - nx * (spokeR + 8);
+    const y2 = sy - ny * (spokeR + 8);
+
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowhead)"/>`;
+    svg += `<line x1="${x2}" y1="${y2}" x2="${x1}" y2="${y1}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.5"/>`;
+  });
+
+  // Hub glow
+  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+12}" fill="none" stroke="#2563eb" stroke-width="1" opacity="0.15"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR+20}" fill="none" stroke="#2563eb" stroke-width="0.5" opacity="0.08"/>`;
+
+  // Hub circle
+  svg += `<circle cx="${cx}" cy="${cy}" r="${hubR}" fill="#2563eb" filter="url(#glow)" opacity="0.95"/>`;
+  svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="white" font-size="18">🔀</text>`;
+  svg += `<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="white" font-size="9" font-weight="600">TRIAGE</text>`;
+
+  // Spoke circles
+  spokes.forEach((s, i) => {
+    const angle = angles[i] * Math.PI / 180;
+    const sx = cx + orbit * Math.cos(angle);
+    const sy = cy + orbit * Math.sin(angle);
+
+    svg += `<circle cx="${sx}" cy="${sy}" r="${spokeR}" fill="${s.color}" opacity="0.9"/>`;
+    svg += `<text x="${sx}" y="${sy-2}" text-anchor="middle" fill="white" font-size="14">${s.icon}</text>`;
+    svg += `<text x="${sx}" y="${sy+11}" text-anchor="middle" fill="white" font-size="7" font-weight="500">${s.name.replace(' Agent','')}</text>`;
+  });
+
+  // Labels
+  svg += `<text x="${cx}" y="${30}" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">Hub-and-Spoke Architecture</text>`;
+  svg += `<text x="${cx}" y="${cy + orbit + spokeR + 30}" text-anchor="middle" fill="#94a3b8" font-size="9">Triage Agent routes to specialist agents via Handoff mechanism</text>`;
+
+  svg += `</svg>`;
+  container.innerHTML = svg;
+}
+
+// =============================================
+// TAB 3: AGENT DETAILS
+// =============================================
+let selectedAgentIdx = -1;
+
+function renderAgentCards() {
+  const grid = document.getElementById('agent-cards-grid');
+  grid.innerHTML = AGENTS.map((a, i) => `
+    <div class="agent-detail-card" id="adc-${i}" onclick="toggleAgent(${i})">
+      <div class="adc-top">
+        <div class="adc-icon-wrap" style="background:${a.color}12">${a.icon}</div>
+        <div>
+          <div class="adc-name">${a.name}</div>
+          <span class="adc-tool-count" style="background:${a.color}10;color:${a.color}">${a.tools.length} tools</span>
+        </div>
+      </div>
+      <div class="adc-desc">${a.desc}</div>
+    </div>
+  `).join('');
+}
+
+function toggleAgent(idx) {
+  if (selectedAgentIdx === idx) {
+    selectedAgentIdx = -1;
+    document.getElementById('agent-expanded').innerHTML = '';
+    document.querySelectorAll('.agent-detail-card').forEach(c => c.classList.remove('expanded'));
+    return;
+  }
+  selectedAgentIdx = idx;
+  document.querySelectorAll('.agent-detail-card').forEach(c => c.classList.remove('expanded'));
+  document.getElementById('adc-'+idx).classList.add('expanded');
+
+  const a = AGENTS[idx];
+  let html = `<div class="agent-expanded">
+    <div class="aex-header" style="background:linear-gradient(135deg,${a.color},${a.color}dd)">
+      <span class="aex-icon">${a.icon}</span>
+      <div><h3>${a.name}</h3><p>${a.desc}</p></div>
+    </div>
+    <div class="aex-body">
+      <div class="detail-section">
+        <h4>🔧 Tools</h4>`;
+  a.tools.forEach(t => {
+    const d = TOOL_DETAILS[t] || { desc:'Tool function', params:'' };
+    html += `<div class="tool-item">
+      <div class="ti-name">${t}</div>
+      <div class="ti-desc">${d.desc}</div>
+      ${d.params ? `<div class="ti-params">params: ${d.params}</div>` : ''}
+    </div>`;
+  });
+  html += `</div><div class="detail-section">
+    <h4>↔️ Handoff Targets</h4>`;
+  a.handoffs.forEach(h => {
+    const ha = AGENTS.find(x => x.name === h);
+    html += `<div class="handoff-item" onclick="toggleAgent(${AGENTS.indexOf(ha)})">
+      <span class="hi-icon">${ha ? ha.icon : '🤖'}</span>
+      <div style="flex:1">
+        <div class="hi-name">${h}</div>
+        <div class="hi-desc">${ha ? ha.desc : ''}</div>
+      </div>
+      <span class="hi-arrow">→</span>
+    </div>`;
+  });
+  if (a.guardrails.length > 0) {
+    html += `<h4 style="margin-top:16px">🛡️ Input Guardrails</h4>`;
+    a.guardrails.forEach(g => {
+      const isRel = g.includes('Relevance');
+      html += `<div class="guardrail-item">
+        <div class="gi-top"><span>${isRel ? '🎯' : '🔒'}</span><span class="gi-name">${g}</span></div>
+        <div class="gi-desc">${isRel ? 'Ensures messages are relevant to airline customer service topics' : 'Detects and blocks attempts to bypass or override system instructions'}</div>
+      </div>`;
+    });
+  }
+  html += `</div></div></div>`;
+  document.getElementById('agent-expanded').innerHTML = html;
+
+  // Scroll to expanded
+  document.getElementById('agent-expanded').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function renderHandoffMatrix() {
+  const table = document.getElementById('matrix-table');
+  const agentShortNames = AGENTS.map(a => a.name.replace(' Agent',''));
+
+  let html = '<thead><tr><th>From \\ To</th>';
+  agentShortNames.forEach(n => { html += `<th>${n}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  AGENTS.forEach(a => {
+    html += `<tr><td><div class="matrix-from"><span>${a.icon}</span><span>${a.name.replace(' Agent','')}</span></div></td>`;
+    AGENTS.forEach(b => {
+      if (a.name === b.name) {
+        html += '<td style="color:var(--text-muted)">—</td>';
+      } else if (a.handoffs.includes(b.name)) {
+        html += `<td><span class="handoff-badge" style="background:${b.color}15;color:${b.color}">${b.icon} ${b.name.replace(' Agent','')}</span></td>`;
+      } else {
+        html += '<td><span class="no-handoff">—</span></td>';
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// =============================================
+// INIT
+// =============================================
+initScenarioGrid();
+updateAgentPanel();
+renderArchitectureSVG();
+renderAgentCards();
+renderHandoffMatrix();
+</script>
+</body>
 </html>
