@@ -1,15 +1,13 @@
 'use client';
 
-import React from 'react';
-import { useApp } from '@/contexts/app-context';
 import { t } from '@/lib/i18n';
-import { ArchitectureOutput, Locale, BusinessRule } from '@/types/architecture';
+import { useApp } from '@/contexts/app-context';
+import type { AgentRecord, AgentVersion, DemoVersion, ArchitectureOutput, Locale } from '@/types/architecture';
 
 function ArchitectureDiagramInner({ architecture }: { architecture: ArchitectureOutput }) {
   const { state } = useApp();
   const locale: Locale = state.locale;
 
-  const allAgents = [architecture.triage_agent, ...architecture.spoke_agents];
   const spokeAgents = architecture.spoke_agents;
   const cx = 340, cy = 260, radius = 180;
 
@@ -20,18 +18,7 @@ function ArchitectureDiagramInner({ architecture }: { architecture: Architecture
 
   const spokePositions = spokeAgents.map((_, i) => getAgentPosition(i, spokeAgents.length));
 
-  const getHandoffTargets = (fromId: string): string[] => {
-    return architecture.handoff_matrix[fromId] || [];
-  };
-
   const stepColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-
-  const ruleTypeColors: Record<string, string> = {
-    guardrail: '#ef4444',
-    constraint: '#f59e0b',
-    escalation: '#f97316',
-    routing: '#3b82f6',
-  };
 
   return (
     <div className="h-full overflow-y-auto p-6 bg-muted/20">
@@ -153,12 +140,12 @@ function ArchitectureDiagramInner({ architecture }: { architecture: Architecture
 
 export default function ArchitectureDiagramClient() {
   const { state } = useApp();
-  const selectedAgent = state.agents.find(a => a.id === state.selectedAgentId);
+  const selectedAgent = state.agents.find((a: AgentRecord) => a.id === state.selectedAgentId);
   const selectedVersion = selectedAgent?.versions.find(
-    v => v.version === state.selectedVersionId
+    (v: AgentVersion) => v.version === state.selectedVersionId
   );
   const selectedDemo = selectedVersion?.demos.find(
-    d => d.version === state.selectedDemoId
+    (d: DemoVersion) => d.version === state.selectedDemoId
   ) ?? selectedVersion?.demos[0];
 
   if (selectedDemo?.architecture) {

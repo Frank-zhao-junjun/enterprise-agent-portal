@@ -1,14 +1,10 @@
 'use client';
 
-/* eslint-disable react-compiler-react17/no-undefined突变 */
-
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/app-context';
-import { t, getAgentName, getRuleTypeName, getLocale } from '@/lib/i18n';
+import { t, getAgentName, getRuleTypeName } from '@/lib/i18n';
 import type { Locale } from '@/lib/i18n';
 import type { ScenarioStep, AgentDefinition, BusinessRule } from '@/types/architecture';
-
-type RuleType = 'guardrail' | 'constraint' | 'escalation' | 'routing';
 
 const RULE_ICONS: Record<string, string> = {
   guardrail: '🛡️',
@@ -17,12 +13,12 @@ const RULE_ICONS: Record<string, string> = {
   routing: '🔀',
 };
 
-type RuleStatusColor = {
+interface RuleStatusColor {
   badge: string;
   statusPassed: string;
   statusFailed: string;
   statusPending: string;
-};
+}
 
 const RULE_COLORS: Record<string, RuleStatusColor> = {
   guardrail: { badge: 'bg-red-100 text-red-700', statusPassed: 'text-green-600', statusFailed: 'text-red-600', statusPending: 'text-gray-400' },
@@ -30,10 +26,6 @@ const RULE_COLORS: Record<string, RuleStatusColor> = {
   escalation: { badge: 'bg-orange-100 text-orange-700', statusPassed: 'text-green-600', statusFailed: 'text-orange-600', statusPending: 'text-gray-400' },
   routing: { badge: 'bg-blue-100 text-blue-700', statusPassed: 'text-green-600', statusFailed: 'text-blue-600', statusPending: 'text-gray-400' },
 };
-
-const STEP_TYPE_LABELS: Record<string, { customer: I18NKey; agent: I18NKey; tool_call: I18NKey; handoff: I18NKey; guardrail: I18NKey; constraint: I18NKey; escalation: I18NKey; routing: I18NKey }> = {
-  customer: { customer: 'step_customer', agent: 'step_agent', tool_call: 'step_tool', handoff: 'step_handoff', guardrail: 'step_guardrail', constraint: 'step_constraint', escalation: 'step_escalation', routing: 'step_routing' },
-} as any;
 
 type I18NKey = Parameters<typeof t>[0];
 
@@ -73,57 +65,55 @@ export default function InteractiveDemoClient() {
   const scenarios = currentDemo?.scenarios ?? [];
   const currentScenario = scenarios[0];
 
-  // Cleanup auto-play on unmount
   useEffect(() => {
     return () => { if (autoPlayRef.current) clearInterval(autoPlayRef.current); };
   }, []);
 
-  // Auto-play
-  const startAutoPlay = useCallback(() => {
+  const startAutoPlay = () => {
     if (!currentScenario) return;
     dispatch({ type: 'SET_DEMO_AUTO_PLAY', payload: true });
     autoPlayRef.current = setInterval(() => {
       if (state.demoCurrentStep >= currentScenario.steps.length - 1) {
-        clearInterval(autoPlayRef.current!);
+        if (autoPlayRef.current) clearInterval(autoPlayRef.current);
         dispatch({ type: 'SET_DEMO_AUTO_PLAY', payload: false });
       } else {
         dispatch({ type: 'SET_DEMO_STEP', payload: state.demoCurrentStep + 1 });
       }
     }, 1500);
-  }, [currentScenario, state.demoCurrentStep, dispatch]);
+  };
 
-  const stopAutoPlay = useCallback(() => {
+  const stopAutoPlay = () => {
     if (autoPlayRef.current) clearInterval(autoPlayRef.current);
     dispatch({ type: 'SET_DEMO_AUTO_PLAY', payload: false });
-  }, [dispatch]);
+  };
 
-  const handleNextStep = useCallback(() => {
+  const handleNextStep = () => {
     if (!currentScenario) return;
     stopAutoPlay();
     if (state.demoCurrentStep < currentScenario.steps.length - 1) {
       dispatch({ type: 'SET_DEMO_STEP', payload: state.demoCurrentStep + 1 });
     }
-  }, [currentScenario, state.demoCurrentStep, dispatch, stopAutoPlay]);
+  };
 
-  const handlePrevStep = useCallback(() => {
+  const handlePrevStep = () => {
     stopAutoPlay();
     if (state.demoCurrentStep > 0) {
       dispatch({ type: 'SET_DEMO_STEP', payload: state.demoCurrentStep - 1 });
     }
-  }, [state.demoCurrentStep, dispatch, stopAutoPlay]);
+  };
 
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     stopAutoPlay();
     dispatch({ type: 'RESET_DEMO' });
-  }, [dispatch, stopAutoPlay]);
+  };
 
-  const handleAutoPlayToggle = useCallback(() => {
+  const handleAutoPlayToggle = () => {
     if (state.demoAutoPlay) {
       stopAutoPlay();
     } else {
       startAutoPlay();
     }
-  }, [state.demoAutoPlay, startAutoPlay, stopAutoPlay]);
+  };
 
   if (!currentDemo || !currentScenario) {
     return (
@@ -143,13 +133,11 @@ export default function InteractiveDemoClient() {
   const allAgents: AgentDefinition[] = [triage, ...spokeAgents];
   const rules: BusinessRule[] = currentDemo.architecture.business_rules ?? [];
 
-  // Determine active agent at current step
   const activeAgentId = currentStepData?.agent
     ? allAgents.find(a => getAgentName({ name: a.name }, locale) === currentStepData.agent || a.name === currentStepData.agent)?.id
       ?? allAgents[0]?.id
     : allAgents[0]?.id;
 
-  // Compute rule statuses at current step
   const getRuleStatus = (rule: BusinessRule): 'passed' | 'failed' | 'pending' => {
     if (!currentStepData) return 'pending';
     if (currentStepData.type === 'guardrail' || currentStepData.type === 'constraint' ||
@@ -161,7 +149,6 @@ export default function InteractiveDemoClient() {
     return 'pending';
   };
 
-  // Compute visible events (steps up to current)
   const visibleSteps = steps.slice(0, state.demoCurrentStep + 1);
 
   return (
@@ -173,11 +160,7 @@ export default function InteractiveDemoClient() {
           <label className="text-sm font-medium shrink-0">{t('label_scenario', locale)}:</label>
           <select
             value={currentScenario?.name || ''}
-            onChange={(e) => {
-              dispatch({ type: 'SET_DEMO_STEP', payload: 0 });
-              dispatch({ type: 'SET_DEMO_AUTO_PLAY', payload: false });
-            }}
-            onChangeCapture={() => {
+            onChange={() => {
               dispatch({ type: 'RESET_DEMO' });
             }}
             className="flex-1 min-w-0 px-3 py-1.5 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -353,7 +336,7 @@ export default function InteractiveDemoClient() {
           <div className="space-y-1.5">
             {rules.map((rule: BusinessRule) => {
               const status = getRuleStatus(rule);
-              const colors = RULE_COLORS[rule.type] ?? { badge: 'bg-gray-100 text-gray-600', status: { passed: 'text-green-600', failed: 'text-red-600', pending: 'text-gray-400' } };
+              const colors = RULE_COLORS[rule.type] ?? { badge: 'bg-gray-100 text-gray-600', statusPassed: 'text-green-600', statusFailed: 'text-red-600', statusPending: 'text-gray-400' };
               return (
                 <div key={rule.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 min-w-0">

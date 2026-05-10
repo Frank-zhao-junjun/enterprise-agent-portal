@@ -524,16 +524,17 @@ const i18nData: Record<Locale, I18NStrings> = {
   },
 };
 
-// t() returns a string with .badge property — valid ReactNode + supports .badge
-export function t(key: I18NKey, locale: Locale): string & { badge: string } {
-  const base = i18nData[locale]?.[key as keyof I18NStrings] ??
+// t() returns plain string for JSX rendering
+export function t(key: I18NKey, locale: Locale): string {
+  return i18nData[locale]?.[key as keyof I18NStrings] ??
     i18nData.en[key as keyof I18NStrings] ?? key;
+}
+
+// tBadge() returns the badge variant of a key
+export function tBadge(key: I18NKey, locale: Locale): string {
   const badgeKey = `${key}_badge` as keyof I18NStrings;
-  const badge = i18nData[locale]?.[badgeKey] ??
+  return i18nData[locale]?.[badgeKey] ??
     i18nData.en[badgeKey] ?? '•';
-  const result = base as string & { badge: string };
-  result.badge = badge;
-  return result;
 }
 
 export function ts(key: I18NKey, locale: Locale): string {

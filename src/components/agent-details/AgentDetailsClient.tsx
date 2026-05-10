@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/app-context';
 import { t, getRuleTypeName } from '@/lib/i18n';
-import { HandoffTarget, AgentDefinition, ArchitectureOutput, Locale, BusinessRule } from '@/types/architecture';
+import { AgentDefinition, ArchitectureOutput, Locale, BusinessRule } from '@/types/architecture';
 
 function AgentCard({ agent, allAgents, businessRules, locale }: {
   agent: AgentDefinition;

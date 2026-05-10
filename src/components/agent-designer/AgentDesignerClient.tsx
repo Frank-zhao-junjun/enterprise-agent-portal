@@ -44,8 +44,7 @@ export default function AgentDesignerClient() {
 
   const locale: Locale = state.locale;
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
-  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
-  const [expandedDemoId, setExpandedDemoId] = useState<string | null>(null);
+
   const [generating, setGenerating] = useState(false);
 
   // ===== Agent Operations =====

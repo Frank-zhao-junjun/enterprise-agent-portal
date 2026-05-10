@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import { AppState, UIAction, AgentRecord, AgentVersion, DemoVersion, Locale } from '@/types/architecture';
 import { loadAgents, saveAgents, generateId, getNextVersion, getNextDemoVersion } from '@/lib/data-service';
 
