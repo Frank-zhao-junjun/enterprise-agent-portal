@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
   generator: 'Coze Code',
   icons: {
-    icon: '',
+    icon: '/favicon.ico',
   },
   openGraph: {
     title: 'Agent Architecture Designer',
