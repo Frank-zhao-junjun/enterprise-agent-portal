@@ -3,3 +3,7 @@ Thumbs.db
 *.log
 node_modules/
 .vscode/
+__pycache__/
+*.pyc
+data/*.db
+data/*.db-*
