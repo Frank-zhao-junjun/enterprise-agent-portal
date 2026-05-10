@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_SC } from 'next/font/google';
 import { AppProvider } from '@/contexts/app-context';
-import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -52,7 +51,6 @@ export default function RootLayout({
       <body className={`antialiased font-sans`}>
         <AppProvider>
           {children}
-          {process.env.NODE_ENV === 'development' && <Inspector />}
         </AppProvider>
       </body>
     </html>
