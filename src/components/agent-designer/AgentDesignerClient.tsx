@@ -222,6 +222,7 @@ export default function AgentDesignerClient() {
     if (!selectedAgent || !selectedVersion || !selectedDemo) return;
     const triage = selectedDemo.architecture.triage_agent;
     const tool: ToolDefinition = {
+      id: `tool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: 'new_tool',
       description: locale === 'zh' ? '新工具描述' : 'New tool description',
     };
@@ -361,11 +362,15 @@ export default function AgentDesignerClient() {
     const agent: AgentDefinition = {
       id: generateId(),
       name: locale === 'zh' ? '新子 Agent' : 'New Spoke Agent',
+      nameEn: 'New Spoke Agent',
       description: '',
+      descriptionEn: '',
+      handoff_description: '',
       icon: '🤖',
       color: AGENT_COLORS[selectedDemo.architecture.spoke_agents.length % AGENT_COLORS.length],
       tools: [],
-      handoffs: [triage.id],
+      handoffs: [{ agentId: triage.id, label: 'Return to Hub' }],
+      input_guardrails: [],
     };
     const spokes = [...selectedDemo.architecture.spoke_agents, agent];
     const matrix = { ...selectedDemo.architecture.handoff_matrix };

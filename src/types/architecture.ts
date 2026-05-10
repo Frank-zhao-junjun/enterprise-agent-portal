@@ -2,10 +2,23 @@
 // Agent Architecture Designer - Type Definitions
 // ============================================================
 
+// --- Input Guardrail ---
+export interface InputGuardrail {
+  id: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  type: 'relevance' | 'jailbreak';
+  model: string; // e.g., "gpt-4.1-mini"
+}
+
 // --- Tool Definition ---
 export interface ToolDefinition {
+  id: string;
   name: string;
   description: string;
+  shared_with?: string[];     // Agent IDs that also use this tool
+  updates_context?: string;   // Context field name this tool updates
 }
 
 // --- Business Rule ---
@@ -20,23 +33,65 @@ export interface BusinessRule {
   trigger_example: string;
 }
 
+// --- Handoff Target (with hook info) ---
+export interface HandoffTarget {
+  agentId: string;
+  label: string;
+  hasHook?: boolean;        // Whether this handoff has an on_handoff callback
+  hookDescription?: string; // What the hook does (e.g., "Pre-fill confirmation_number and flight_number")
+}
+
 // --- Agent ---
 export interface AgentDefinition {
   id: string;
   name: string;
+  nameEn: string;
   description: string;
+  descriptionEn: string;
   icon: string;
   color: string;
+  handoff_description: string; // Description for LLM routing decisions
   tools: ToolDefinition[];
-  handoffs: string[]; // Agent IDs this agent can hand off to
+  handoffs: HandoffTarget[];
+  input_guardrails: InputGuardrail[]; // Guardrails applied to this agent
 }
 
 // --- Architecture ---
 export interface ArchitectureOutput {
+  schema_version: string;
   triage_agent: AgentDefinition;
   spoke_agents: AgentDefinition[];
+  input_guardrails: InputGuardrail[];     // SDK-level safety guardrails
   business_rules: BusinessRule[];
   handoff_matrix: Record<string, string[]>; // Agent ID -> [target Agent IDs]
+  shared_context: SharedContextDefinition;  // Shared context across agents
+}
+
+// --- Shared Context ---
+export interface SharedContextField {
+  name: string;
+  type: string;           // e.g., "str | None"
+  description: string;
+  descriptionEn: string;
+  written_by: string[];   // Agent IDs that write to this field
+  read_by: string[];      // Agent IDs that read this field
+}
+
+export interface SharedContextDefinition {
+  name: string;
+  nameEn: string;
+  description: string;
+  descriptionEn: string;
+  fields: SharedContextField[];
+  hydration_methods: ContextHydrationMethod[];
+}
+
+export interface ContextHydrationMethod {
+  name: string;
+  nameEn: string;
+  description: string;
+  descriptionEn: string;
+  example: string;
 }
 
 // --- Scenario Step ---
@@ -44,37 +99,38 @@ export type ScenarioStepType =
   | 'customer'
   | 'agent'
   | 'tool_call'
+  | 'tool_result'
   | 'handoff'
-  | 'guardrail'
+  | 'guardrail_check'
+  | 'guardrail_trigger'
   | 'constraint'
   | 'escalation'
   | 'routing';
-
-// --- Handoff ---
-export interface HandoffTarget {
-  agentId: string;
-  agentName: string;
-  agentIcon: string;
-  agentColor: string;
-  reason?: string;
-}
 
 export interface ScenarioStep {
   type: ScenarioStepType;
   agent?: string;
   content: string;
+  contentEn?: string;
   targetAgent?: string;
   toolName?: string;
+  toolResult?: string;
   ruleName?: string;
   ruleType?: BusinessRuleType;
+  guardrailName?: string;    // For guardrail_check / guardrail_trigger
+  guardrailType?: 'relevance' | 'jailbreak';
   passed?: boolean;
+  reasoning?: string;        // Guardrail reasoning
 }
 
 // --- Scenario ---
 export interface Scenario {
   id: string;
   name: string;
+  nameEn: string;
   description: string;
+  descriptionEn: string;
+  type: string;
   steps: ScenarioStep[];
 }
 

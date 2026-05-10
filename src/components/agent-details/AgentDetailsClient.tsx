@@ -1,184 +1,255 @@
 'use client';
 
-import React, { useState } from 'react';
+import { t, getAgentName } from '@/lib/i18n';
 import { useApp } from '@/contexts/app-context';
-import { t, getRuleTypeName } from '@/lib/i18n';
-import { AgentDefinition, ArchitectureOutput, Locale, BusinessRule } from '@/types/architecture';
+import type { AgentRecord, AgentVersion, DemoVersion, ArchitectureOutput, AgentDefinition, Locale } from '@/types/architecture';
 
-function AgentCard({ agent, allAgents, businessRules, locale }: {
-  agent: AgentDefinition;
-  allAgents: AgentDefinition[];
-  businessRules: BusinessRule[];
-  locale: Locale;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const isTriage = agent === allAgents[0];
+function AgentCard({ agent, allAgents, locale }: { agent: AgentDefinition; allAgents: AgentDefinition[]; locale: Locale }) {
+  const displayName = getAgentName(agent, locale);
+  const handoffTargets = agent.handoffs.map(h => {
+    const target = allAgents.find(a => a.id === h.agentId);
+    return { ...h, target };
+  }).filter(h => h.target);
 
-  const appliedRules = businessRules.filter(r => r.applies_to?.includes(agent.id));
-
-  const handoffTargets = (agent.handoffs || [])
-    .map(h => allAgents.find(a => a.id === h))
-    .filter((a): a is AgentDefinition => a !== undefined);
+  const guardrails = agent.input_guardrails ?? [];
+  const toolCount = agent.tools.length;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-border shadow-sm overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors text-left"
-      >
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: agent.color + '20' }}>
-          {agent.icon}
-        </div>
+    <div className="rounded-xl border border-border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      {/* Agent Header */}
+      <div className="p-4 flex items-center gap-3" style={{ backgroundColor: agent.color + '15' }}>
+        <span className="text-2xl">{agent.icon}</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">{agent.name}</h3>
-            {isTriage && (
-              <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                Hub
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">{agent.description}</p>
+          <h3 className="font-semibold text-sm truncate">{displayName}</h3>
+          <p className="text-xs text-muted-foreground">{agent.handoff_description}</p>
         </div>
-        <span className={`text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
-      </button>
+        <div className="flex gap-1.5 flex-shrink-0">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+            {toolCount} {locale === 'zh' ? '工具' : 'tools'}
+          </span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">
+            {handoffTargets.length} {locale === 'zh' ? '转接' : 'handoffs'}
+          </span>
+          {guardrails.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700">
+              🛡️ {guardrails.length}
+            </span>
+          )}
+        </div>
+      </div>
 
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-border space-y-4 pt-3">
-          {/* Tools */}
-          {agent.tools && agent.tools.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t('label_tools', locale)}</h4>
-              <div className="space-y-1.5">
-                {agent.tools.map((tool, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30">
-                    <span className="text-sm mt-0.5">⚙️</span>
-                    <div>
-                      <p className="text-xs font-medium font-mono">{tool.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{tool.description}</p>
-                    </div>
-                  </div>
-                ))}
+      {/* Tools */}
+      <div className="p-4 border-t border-border/50">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          {locale === 'zh' ? '工具 (Tools)' : 'Tools'}
+        </h4>
+        <div className="space-y-2">
+          {agent.tools.map(tool => (
+            <div key={tool.id} className="flex items-start gap-2">
+              <span className="text-xs mt-0.5">🔧</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-medium">{tool.name}</span>
+                  {tool.shared_with && tool.shared_with.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                      {locale === 'zh' ? '共享' : 'shared'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{tool.description}</p>
+                {tool.updates_context && (
+                  <p className="text-[10px] text-emerald-600 mt-0.5">
+                    ✏️ {locale === 'zh' ? '更新上下文' : 'Updates context'}: <code className="font-mono">{tool.updates_context}</code>
+                  </p>
+                )}
               </div>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          {/* Handoffs */}
-          {handoffTargets.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t('label_handoffs', locale)}</h4>
-              <div className="flex flex-wrap gap-1.5">
-                {handoffTargets.map(target => (
-                  <span key={target.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: target.color + '15', color: target.color }}>
-                    {target.icon} {target.name}
-                  </span>
-                ))}
-              </div>
+      {/* Handoff Targets */}
+      <div className="p-4 border-t border-border/50">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          {locale === 'zh' ? '转接目标 (Handoff Targets)' : 'Handoff Targets'}
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          {handoffTargets.map(h => (
+            <div key={h.agentId} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-muted/30">
+              <span className="text-sm">{h.target!.icon}</span>
+              <span className="text-xs font-medium">{getAgentName(h.target!, locale)}</span>
+              {h.hasHook && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700" title={locale === 'zh' ? '有 on_handoff 钩子' : 'Has on_handoff hook'}>
+                  🔧 hook
+                </span>
+              )}
+              {h.agentId === allAgents[0]?.id && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                  {locale === 'zh' ? '回Hub' : '→ Hub'}
+                </span>
+              )}
             </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          {/* Applied Rules */}
-          {appliedRules.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t('section_business_rules_detail', locale)}</h4>
-              <div className="space-y-1.5">
-                {appliedRules.map((rule, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2 rounded-lg border border-l-2" style={{ borderLeftColor: ruleTypeColor(rule.type) }}>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold">{rule.name}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{getRuleTypeName(rule.type, locale)}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{rule.description}</p>
-                    </div>
-                  </div>
-                ))}
+      {/* Input Guardrails */}
+      {guardrails.length > 0 && (
+        <div className="p-4 border-t border-border/50">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            🛡️ {locale === 'zh' ? '输入护栏 (Input Guardrails)' : 'Input Guardrails'}
+          </h4>
+          <div className="space-y-1.5">
+            {guardrails.map(gr => (
+              <div key={gr.id} className="flex items-center gap-2 text-xs">
+                <span>{gr.type === 'relevance' ? '🔍' : '🔒'}</span>
+                <span className="font-medium">{locale === 'zh' ? gr.name : gr.nameEn}</span>
+                <span className="text-muted-foreground">({gr.model})</span>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function ruleTypeColor(type: string): string {
-  const map: Record<string, string> = {
-    guardrail: '#ef4444',
-    constraint: '#f59e0b',
-    escalation: '#f97316',
-    routing: '#3b82f6',
-  };
-  return map[type] || '#94a3b8';
-}
-
-function HandoffMatrix({ allAgents, handoffMatrix, locale }: {
-  allAgents: AgentDefinition[];
-  handoffMatrix: Record<string, string[]>;
-  locale: Locale;
-}) {
-  const hasHandoff = (fromId: string, toId: string): boolean => {
-    return (handoffMatrix[fromId] || []).includes(toId);
-  };
+function HandoffMatrix({ architecture, locale }: { architecture: ArchitectureOutput; locale: Locale }) {
+  const triageAgent = architecture.triage_agent;
+  const spokeAgents = architecture.spoke_agents;
+  const allAgents = [triageAgent, ...spokeAgents];
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-border shadow-sm overflow-x-auto">
-      <div className="p-4 border-b border-border">
-        <h3 className="font-semibold text-sm">{t('section_handoff_matrix', locale)}</h3>
-      </div>
-      <table className="w-full text-xs">
-        <thead>
-          <tr>
-            <th className="p-2 text-left font-medium text-muted-foreground sticky left-0 bg-white dark:bg-slate-900 z-10 min-w-[80px]">{t('label_from', locale)}</th>
-            {allAgents.map(a => (
-              <th key={a.id} className="p-2 text-center font-medium min-w-[100px]">
-                <div className="flex items-center justify-center gap-1">
-                  <span>{a.icon}</span>
-                  <span className="truncate max-w-[80px]">{a.name}</span>
-                </div>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-border shadow-sm p-6">
+      <h3 className="font-semibold mb-4">{locale === 'zh' ? '转接关系矩阵 (Handoff Matrix)' : 'Handoff Matrix'}</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground border-b border-border">
+                {locale === 'zh' ? '来源 ↓ / 目标 →' : 'From ↓ / To →'}
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {allAgents.map(row => (
-            <tr key={row.id} className="border-t border-border/50">
-              <td className="p-2 font-medium sticky left-0 bg-white dark:bg-slate-900 z-10">
-                <div className="flex items-center gap-1">
-                  <span>{row.icon}</span>
-                  <span className="truncate max-w-[80px]">{row.name}</span>
-                </div>
-              </td>
-              {allAgents.map(col => {
-                if (row.id === col.id) {
+              {allAgents.map(a => (
+                <th key={a.id} className="py-2 px-2 text-center font-medium border-b border-border">
+                  <span className="block">{a.icon}</span>
+                  <span className="text-[10px]">{getAgentDisplayName(a, locale)}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {allAgents.map(fromAgent => (
+              <tr key={fromAgent.id} className="hover:bg-muted/30">
+                <td className="py-2 px-2 font-medium border-b border-border/50 whitespace-nowrap">
+                  <span className="mr-1">{fromAgent.icon}</span>
+                  {getAgentDisplayName(fromAgent, locale)}
+                </td>
+                {allAgents.map(toAgent => {
+                  if (fromAgent.id === toAgent.id) {
+                    return (
+                      <td key={toAgent.id} className="py-2 px-2 text-center border-b border-border/50">
+                        <span className="text-slate-300">·</span>
+                      </td>
+                    );
+                  }
+                  const handoff = fromAgent.handoffs.find(h => h.agentId === toAgent.id);
+                  if (handoff) {
+                    const isTriageSource = fromAgent.id === triageAgent.id;
+                    const isBackToHub = toAgent.id === triageAgent.id && fromAgent.id !== triageAgent.id;
+                    const isCrossSpoke = fromAgent.id !== triageAgent.id && toAgent.id !== triageAgent.id;
+                    let bgClass = 'bg-green-100 text-green-700';
+                    let label = '✓';
+                    if (isBackToHub) {
+                      bgClass = 'bg-slate-100 text-slate-600';
+                      label = '↩';
+                    } else if (isCrossSpoke) {
+                      bgClass = handoff.hasHook ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700';
+                      label = handoff.hasHook ? '🔧' : '⟶';
+                    } else if (isTriageSource) {
+                      bgClass = handoff.hasHook ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700';
+                      label = handoff.hasHook ? '🔧' : '✓';
+                    }
+                    return (
+                      <td key={toAgent.id} className="py-2 px-2 text-center border-b border-border/50">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${bgClass}`}>
+                          {label}
+                        </span>
+                      </td>
+                    );
+                  }
                   return (
-                    <td key={col.id} className="p-2 text-center">
-                      <span className="text-slate-300">·</span>
+                    <td key={toAgent.id} className="py-2 px-2 text-center border-b border-border/50">
+                      <span className="text-slate-300">✕</span>
                     </td>
                   );
-                }
-                const connected = hasHandoff(row.id, col.id);
-                return (
-                  <td key={col.id} className="p-2 text-center">
-                    {connected ? (
-                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: col.color + '15', color: col.color }}>
-                        →{col.icon}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">✕</span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Legend */}
+      <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground flex-wrap">
+        <span className="flex items-center gap-1"><span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-700 text-[8px]">✓</span> {locale === 'zh' ? 'Hub→Spoke' : 'Hub→Spoke'}</span>
+        <span className="flex items-center gap-1"><span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-100 text-slate-600 text-[8px]">↩</span> {locale === 'zh' ? '回Hub' : '→Hub'}</span>
+        <span className="flex items-center gap-1"><span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[8px]">⟶</span> {locale === 'zh' ? '跨Spoke直连' : 'Cross-Spoke'}</span>
+        <span className="flex items-center gap-1"><span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-700 text-[8px]">🔧</span> {locale === 'zh' ? '有Hook' : 'With Hook'}</span>
+        <span className="flex items-center gap-1"><span className="text-slate-300">✕</span> {locale === 'zh' ? '无转接' : 'No handoff'}</span>
+      </div>
+    </div>
+  );
+}
+
+function getAgentDisplayName(agent: AgentDefinition, locale: Locale): string {
+  const name = getAgentName(agent, locale);
+  return name.length > 10 ? name.split(' ').slice(0, 2).join(' ') : name;
+}
+
+function AgentDetailsInner({ architecture }: { architecture: ArchitectureOutput }) {
+  const { state } = useApp();
+  const locale: Locale = state.locale;
+
+  const allAgents = [architecture.triage_agent, ...architecture.spoke_agents];
+
+  return (
+    <div className="h-full overflow-y-auto p-6 bg-muted/20">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* IROP Chain Highlight */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-border shadow-sm p-5">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <span>✈️</span>
+            <span>{locale === 'zh' ? 'IROP 完整链路 (航班不正常运营)' : 'IROP Full Chain (Irregular Operations)'}</span>
+          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
+              {architecture.triage_agent.icon} {getAgentDisplayName(architecture.triage_agent, locale)}
+            </span>
+            <span className="text-muted-foreground">→</span>
+            {architecture.spoke_agents.map((agent, i) => {
+              const isIROP = ['flight', 'booking', 'refund'].some(k => agent.id.toLowerCase().includes(k));
+              return (
+                <span key={agent.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isIROP ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300' : 'bg-slate-100 text-slate-500'}`}>
+                  {agent.icon} {getAgentDisplayName(agent, locale)}
+                </span>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            {locale === 'zh'
+              ? 'IROP链路: 航班信息Agent(检测延误) → 预订取消Agent(改签) → 退款赔偿Agent(赔偿)'
+              : 'IROP Chain: Flight Info (detect delay) → Booking (rebook) → Refunds (compensate)'}
+          </p>
+        </div>
+
+        {/* Agent Cards */}
+        <div className="space-y-4">
+          {allAgents.map(agent => (
+            <AgentCard key={agent.id} agent={agent} allAgents={allAgents} locale={locale} />
           ))}
-        </tbody>
-      </table>
-      <div className="p-3 border-t border-border flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="text-slate-300">✕</span> {t('label_no_handoff', locale)}</span>
-        <span>· {t('label_empty', locale)} = N/A</span>
+        </div>
+
+        {/* Handoff Matrix */}
+        <HandoffMatrix architecture={architecture} locale={locale} />
       </div>
     </div>
   );
@@ -186,64 +257,29 @@ function HandoffMatrix({ allAgents, handoffMatrix, locale }: {
 
 export default function AgentDetailsClient() {
   const { state } = useApp();
-  const locale: Locale = state.locale;
-  const selectedAgent = state.agents.find(a => a.id === state.selectedAgentId);
+  const selectedAgent = state.agents.find((a: AgentRecord) => a.id === state.selectedAgentId);
   const selectedVersion = selectedAgent?.versions.find(
-    v => v.version === state.selectedVersionId
+    (v: AgentVersion) => v.version === state.selectedVersionId
   );
   const selectedDemo = selectedVersion?.demos.find(
-    d => d.version === state.selectedDemoId
+    (d: DemoVersion) => d.version === state.selectedDemoId
   ) ?? selectedVersion?.demos[0];
 
-  let architecture: ArchitectureOutput | null = null;
-
   if (selectedDemo?.architecture) {
-    architecture = selectedDemo.architecture;
-  } else if (selectedVersion?.demos?.[0]?.architecture) {
-    architecture = selectedVersion.demos[0].architecture;
+    return <AgentDetailsInner architecture={selectedDemo.architecture} />;
   }
 
-  if (!architecture) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <span className="text-4xl mb-3 block">📋</span>
-          <p className="text-sm">{t('label_no_demo_hint', locale)}</p>
-        </div>
-      </div>
-    );
+  if (selectedVersion?.demos?.[0]?.architecture) {
+    return <AgentDetailsInner architecture={selectedVersion.demos[0].architecture} />;
   }
 
-  const allAgents = [architecture.triage_agent, ...architecture.spoke_agents];
-  const handoffMatrix = architecture.handoff_matrix || {};
+  const locale: Locale = state.locale;
 
   return (
-    <div className="h-full overflow-y-auto p-6 bg-muted/20">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Section: Agents */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <span>{t('section_agents', locale)}</span>
-            <span className="text-xs font-normal text-muted-foreground">({allAgents.length})</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allAgents.map(agent => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                allAgents={allAgents}
-                businessRules={architecture.business_rules || []}
-                locale={locale}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* Section: Handoff Matrix */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3">{t('section_handoff_matrix', locale)}</h2>
-          <HandoffMatrix allAgents={allAgents} handoffMatrix={handoffMatrix} locale={locale} />
-        </section>
+    <div className="h-full flex items-center justify-center text-muted-foreground">
+      <div className="text-center">
+        <span className="text-4xl mb-3 block">📋</span>
+        <p className="text-sm">{t('label_no_demo_hint', locale)}</p>
       </div>
     </div>
   );

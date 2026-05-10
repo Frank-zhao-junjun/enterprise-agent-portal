@@ -179,6 +179,16 @@ export interface I18NStrings {
   section_agents_badge: string;
   section_handoff_matrix_badge: string;
   section_business_rules_detail_badge: string;
+  // Architecture diagram new keys
+  label_architecture: string;
+  label_hub: string;
+  label_handoff_mech: string;
+  label_guardrail: string;
+  label_flow: string;
+  desc_hub: string;
+  desc_handoff: string;
+  desc_guardrail: string;
+  desc_business_rules: string;
 }
 
 const i18nData: Record<Locale, I18NStrings> = {
@@ -351,6 +361,15 @@ const i18nData: Record<Locale, I18NStrings> = {
     section_agents_badge: '📋',
     section_handoff_matrix_badge: '🔗',
     section_business_rules_detail_badge: '📐',
+    label_architecture: 'Architecture Diagram',
+    label_hub: 'Hub Mechanism',
+    label_handoff_mech: 'Handoff Mechanism',
+    label_guardrail: 'Input Guardrails',
+    label_flow: 'Processing Flow',
+    desc_hub: 'All requests enter through Triage Agent (Hub). It performs intent recognition and routes to the appropriate Spoke Agent. This centralizes routing logic and makes it easy to add new agents.',
+    desc_handoff: 'Agents transfer control via Handoff (not message forwarding). The target agent takes over the entire conversation. Cross-spoke direct handoffs avoid unnecessary hub relay.',
+    desc_guardrail: 'Input Guardrails check every message before Agent processing. Relevance Guardrail blocks unrelated queries. Jailbreak Guardrail detects prompt injection attempts. Uses LLM for semantic judgment.',
+    desc_business_rules: 'Business rules enforce domain-specific constraints: confirmation before cancellation, escalation paths, and routing policies. These are implemented via Agent Instructions, not code-level checks.',
   },
   zh: {
     app_title: 'Agent 架构设计器',
@@ -521,6 +540,15 @@ const i18nData: Record<Locale, I18NStrings> = {
     section_agents_badge: '📋',
     section_handoff_matrix_badge: '🔗',
     section_business_rules_detail_badge: '📐',
+    label_architecture: '架构图',
+    label_hub: 'Hub 机制',
+    label_handoff_mech: 'Handoff 机制',
+    label_guardrail: '输入护栏',
+    label_flow: '处理流程',
+    desc_hub: '所有请求通过 Triage Agent（Hub）进入。它执行意图识别并路由到对应的专业 Agent。这集中了路由逻辑，便于新增 Agent。',
+    desc_handoff: 'Agent 通过 Handoff 转移控制权（不是消息转发）。目标 Agent 接管整个对话。跨 Spoke 直连 Handoff 避免了不必要的 Hub 中转。',
+    desc_guardrail: '输入护栏在 Agent 处理之前检查每条消息。Relevance Guardrail 拦截无关查询，Jailbreak Guardrail 检测提示注入攻击。使用 LLM 做语义判断。',
+    desc_business_rules: '业务规则执行领域特定约束：取消前确认、升级路径和路由策略。这些通过 Agent Instructions 实现，而非代码层面的硬约束。',
   },
 };
 
@@ -564,7 +592,8 @@ export function getRuleTypeColor(type: string): string {
 
 export { i18nData };
 
-export function getAgentName(agent: { name?: string; id?: string } | null | undefined, locale: Locale): string {
+export function getAgentName(agent: { name?: string; nameEn?: string; id?: string } | null | undefined, locale: Locale): string {
   if (!agent) return '';
+  if (locale === 'en' && agent.nameEn) return agent.nameEn;
   return agent.name || agent.id || '';
 }
