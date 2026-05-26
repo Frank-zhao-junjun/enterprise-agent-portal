@@ -616,6 +616,10 @@ const panelDescription = document.getElementById("panelDescription");
 const agentSearch = document.getElementById("agentSearch");
 const modal = document.getElementById("agentModal");
 const modalClose = document.getElementById("modalClose");
+const demoModal = document.getElementById("demoModal");
+const demoModalClose = document.getElementById("demoModalClose");
+const demoModalContent = document.getElementById("demoModalContent");
+let pendingDemo = null;
 
 function renderTabs() {
   tabs.innerHTML = categories.map((category) => `
@@ -631,10 +635,10 @@ function renderPanel() {
 
   if (isDiscoveryMode) {
     panelKicker.textContent = "全局搜索";
-    panelTitle.textContent = `找到 ${agents.length} 个匹配智能体`;
+    panelTitle.textContent = `找到 ${agents.length} 个匹配方案`;
     panelDescription.textContent = discoveryDescription();
   } else {
-    panelKicker.textContent = category.kicker;
+    panelKicker.textContent = `${category.tab}业务域`;
     panelTitle.textContent = category.title;
     panelDescription.textContent = category.description;
   }
@@ -653,26 +657,34 @@ function filteredAgents(query) {
 function discoveryDescription() {
   const fragments = [];
   if (state.query.trim()) fragments.push(`关键词“${state.query.trim()}”`);
-  return fragments.length ? `已按 ${fragments.join("、")} 搜索，结果覆盖所有业务板块。` : "跨财务、销售、制造、供应链、采购、主数据等板块统一搜索 Agent、业务场景、系统连接和业务效果。";
+  return fragments.length ? `已按 ${fragments.join("、")} 搜索，结果覆盖所有业务板块。` : "跨财务、销售、制造、供应链、采购、主数据等板块统一搜索业务方案、场景、系统连接和业务成效。";
 }
 
 function cardTemplate(item, category, index, showDomain) {
+  const domainLabel = category.tab;
+  const systemLabel = item.systems[0] || "核心系统";
+  const agentKey = `${category.id}:${index}`;
   return `
-    <button class="agent-card" type="button" data-agent="${category.id}:${index}" aria-label="查看${item.name}详情">
-      <div class="agent-art">${agentSvg(item, category.tab, false)}</div>
+    <article class="agent-card" tabindex="0" data-agent="${agentKey}" aria-label="查看${visibleText(item.name)}详情">
       <div class="agent-card-body">
-        ${showDomain ? `<span class="domain-pill">${category.tab}</span>` : ""}
-        <h4>${item.name}</h4>
-        <p>${item.summary}</p>
+        <div class="agent-head">
+          <span class="agent-domain-tag">${domainLabel}</span>
+          <span class="agent-system-chip">${systemLabel}</span>
+        </div>
+        <h4>${visibleText(item.name)}</h4>
+        <p class="agent-summary">${visibleText(item.summary)}</p>
         <div class="agent-meta">${item.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>
-        <span class="card-link">查看详细说明</span>
+        <div class="card-actions">
+          <span class="card-link">查看方案详情</span>
+          <button class="demo-action" type="button" data-demo-agent="${agentKey}">演示</button>
+        </div>
       </div>
-    </button>
+    </article>
   `;
 }
 
 function emptyTemplate() {
-  return `<div class="empty-state"><h4>没有匹配结果</h4><p>换一个关键词试试，例如“月结”“合同”“视觉”“招聘”。</p></div>`;
+  return `<div class="empty-state"><h4>没有匹配结果</h4><p>换一个关键词试试，例如“月结”“合同”“巡检”“招聘”。</p></div>`;
 }
 
 function agentSvg(item, domain, large) {
@@ -708,7 +720,7 @@ function agentSvg(item, domain, large) {
       <circle cx="50%" cy="50%" r="${large ? 156 : 66}" fill="none" stroke="${primary}" stroke-opacity="0.22" stroke-dasharray="8 10"/>
       <circle cx="50%" cy="50%" r="${large ? 206 : 86}" fill="none" stroke="${secondary}" stroke-opacity="0.15" stroke-dasharray="3 12"/>
       <text x="50%" y="48%" text-anchor="middle" fill="#ffffff" font-size="${fontSize}" font-weight="900">${title}</text>
-      <text x="50%" y="${large ? "55%" : "63%"}" text-anchor="middle" fill="${primary}" font-size="${smallSize}" font-weight="800">${domain} · AI智能体</text>
+      <text x="50%" y="${large ? "55%" : "63%"}" text-anchor="middle" fill="${primary}" font-size="${smallSize}" font-weight="800">${domain} · 业务智能体</text>
     </svg>
   `;
 }
@@ -723,14 +735,158 @@ function openAgent(key) {
   const item = category?.agents[Number(indexText)];
   if (!category || !item) return;
 
-  document.getElementById("modalVisual").innerHTML = agentSvg(item, category.tab, true);
+  const valueLabel = resolveValueLabel(item);
+  document.getElementById("modalVisual").innerHTML = modalVisualTemplate(item, category, valueLabel);
   modal.querySelector(".modal-content").innerHTML = detailTemplate(item, category);
   modal.showModal();
+  document.body.classList.add("modal-open");
+}
+
+function resolveAgentByKey(key) {
+  const [categoryId, indexText] = key.split(":");
+  const category = categories.find((entry) => entry.id === categoryId);
+  const index = Number(indexText);
+  const item = category?.agents[index];
+  if (!category || !item || Number.isNaN(index)) return null;
+  return { category, item, index, agentId: `${category.id}:${index}` };
+}
+
+function demoPayload(selection) {
+  return {
+    agentId: selection.agentId,
+    categoryId: selection.category.id,
+    categoryName: selection.category.tab,
+    agentName: selection.item.name,
+    summary: selection.item.summary,
+    scenario: selection.item.scenario,
+    impact: selection.item.impact,
+    systems: selection.item.systems
+  };
+}
+
+async function openDemoDialog(key) {
+  const selection = resolveAgentByKey(key);
+  if (!selection) return;
+  pendingDemo = selection;
+  demoModalContent.innerHTML = demoConfirmTemplate(selection, null, true);
+  demoModal.showModal();
+  document.body.classList.add("modal-open");
+
+  try {
+    const status = await fetch(`/api/agent-demos/status?agentId=${encodeURIComponent(selection.agentId)}`).then((response) => response.json());
+    if (!pendingDemo || pendingDemo.agentId !== selection.agentId) return;
+    demoModalContent.innerHTML = demoConfirmTemplate(selection, status.data, false);
+  } catch {
+    if (!pendingDemo || pendingDemo.agentId !== selection.agentId) return;
+    demoModalContent.innerHTML = demoConfirmTemplate(selection, null, false, "暂时无法检查已有演示，可直接重新生成。", "warn");
+  }
+}
+
+function demoConfirmTemplate(selection, status, loading, message = "", messageType = "") {
+  const exists = Boolean(status?.exists);
+  const systems = selection.item.systems.slice(0, 5);
+  return `
+    <div class="demo-dialog-head">
+      <p class="modal-domain">${selection.category.tab}板块</p>
+      <h2 id="demoModalTitle">${exists ? "查看或重新生成演示" : "生成智能体演示"}</h2>
+      <p>${visibleText(selection.item.name)} 将生成一个包含 Interactive Demo、Architecture 和 Agent Details 的可分享演示页。</p>
+    </div>
+    <div class="demo-profile">
+      <strong>${visibleText(selection.item.name)}</strong>
+      <p>${visibleText(selection.item.summary)}</p>
+      <div class="modal-tags">${systems.map((system) => `<span>${visibleText(system)}</span>`).join("")}</div>
+    </div>
+    <div class="demo-flow-preview">
+      <span>1. 拆解业务任务</span>
+      <span>2. 生成子 Agent</span>
+      <span>3. 编排协作流程</span>
+      <span>4. 保存演示页面</span>
+    </div>
+    ${loading ? `<p class="demo-message">正在检查是否已有演示...</p>` : ""}
+    ${message ? `<p class="demo-message ${messageType}">${message}</p>` : ""}
+    ${exists ? `<p class="demo-message">已存在演示，更新时间：${status.updatedAt || "未知"}。重新生成会覆盖原内容。</p>` : `<p class="demo-message">尚未生成演示。生成完成后会自动跳转到固定演示页。</p>`}
+    <div class="demo-dialog-actions">
+      ${exists ? `<a class="demo-secondary" href="${status.demoUrl}">查看已有演示</a>` : ""}
+      <button class="demo-primary" type="button" id="demoGenerateButton">${exists ? "重新生成并覆盖" : "生成演示"}</button>
+    </div>
+  `;
+}
+
+function demoGeneratingTemplate(selection, currentStep) {
+  const steps = ["正在拆解业务任务", "正在生成子 Agent", "正在编排协作流程", "正在保存演示页面"];
+  return `
+    <div class="demo-dialog-head">
+      <p class="modal-domain">${selection.category.tab}板块</p>
+      <h2 id="demoModalTitle">正在生成演示</h2>
+      <p>${visibleText(selection.item.name)} 的动态演示正在生成，请稍候。</p>
+    </div>
+    <div class="demo-progress-list">
+      ${steps.map((step, index) => `<div class="demo-progress-item ${index <= currentStep ? "active" : ""}"><span>${index + 1}</span><strong>${step}</strong></div>`).join("")}
+    </div>
+  `;
+}
+
+async function generatePendingDemo() {
+  if (!pendingDemo) return;
+  const selection = pendingDemo;
+  let progress = 0;
+  demoModalContent.innerHTML = demoGeneratingTemplate(selection, progress);
+  const timer = setInterval(() => {
+    progress = Math.min(progress + 1, 3);
+    demoModalContent.innerHTML = demoGeneratingTemplate(selection, progress);
+  }, 420);
+
+  try {
+    const response = await fetch("/api/agent-demos/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify(demoPayload(selection))
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "生成失败");
+    clearInterval(timer);
+    window.location.href = result.data.demoUrl;
+  } catch (error) {
+    clearInterval(timer);
+    demoModalContent.innerHTML = demoConfirmTemplate(selection, null, false, `生成失败：${error.message}`, "error");
+  }
+}
+
+function resolveValueLabel(item) {
+  return valueFilters.find((filter) => filter.terms.some((term) => [item.summary, item.scenario, item.impact].join(" ").includes(term)))?.label || "效率提升";
+}
+
+function modalVisualTemplate(item, category, valueLabel) {
+  const topSystems = item.systems.slice(0, 3);
+  return `
+    <div class="modal-hero-panel">
+      <p class="modal-visual-kicker">实施概览</p>
+      <h3>${visibleText(item.name)}</h3>
+      <p>${visibleText(item.scenario)}</p>
+      <div class="modal-kpi-grid">
+        <article>
+          <span>所属板块</span>
+          <strong>${category.tab}</strong>
+        </article>
+        <article>
+          <span>价值方向</span>
+          <strong>${valueLabel}</strong>
+        </article>
+        <article>
+          <span>关键系统</span>
+          <strong>${topSystems.join(" / ") || "核心系统"}</strong>
+        </article>
+      </div>
+      <div class="modal-system-list">
+        ${topSystems.map((system) => `<span>${visibleText(system)}</span>`).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function detailTemplate(item, category) {
   const relatedAgents = category.agents.filter((agentItem) => agentItem !== item).slice(0, 3);
-  const valueLabel = valueFilters.find((filter) => filter.terms.some((term) => [item.summary, item.scenario, item.impact].join(" ").includes(term)))?.label || "效率提升";
+  const valueLabel = resolveValueLabel(item);
   const detailContent = item.details ? detailedProfileTemplate(item, category, valueLabel) : standardProfileTemplate(item, category, valueLabel);
   return `
     <div class="detail-hero">
@@ -738,8 +894,8 @@ function detailTemplate(item, category) {
       <h2 id="modalTitle">${visibleText(item.name)}</h2>
       <p>${visibleText(item.summary)}</p>
       <div class="modal-tags">
-        <span>AI智能体</span>
-        <span>试用版</span>
+        <span>业务智能体</span>
+        <span>场景方案</span>
         <span>${category.tab}</span>
         <span>${valueLabel}</span>
       </div>
@@ -748,7 +904,7 @@ function detailTemplate(item, category) {
     ${detailContent}
 
     <section class="detail-section related-section">
-      <h3>关联的AI能力</h3>
+      <h3>关联能力</h3>
       <div class="related-list">
         ${relatedAgents.map((agentItem) => `<article><strong>${visibleText(agentItem.name)}</strong><p>${visibleText(agentItem.summary)}</p></article>`).join("")}
       </div>
@@ -886,24 +1042,21 @@ function detailedProfileTemplate(item, category, valueLabel) {
 }
 
 function valueCardTemplate(card) {
-  return `<div><span>${card.label}</span><strong>${visibleText(card.title)}</strong><p>${visibleText(card.text)}</p></div>`;
+  return `<div><strong>${visibleText(card.title)}</strong><p>${visibleText(card.text)}</p></div>`;
 }
 
 function businessValueCards(item, category, details, valueLabel) {
   const metrics = uniqueList((details?.kpis?.length ? details.kpis : [item.impact]).map((metric) => trimPeriod(metric))).slice(0, 5);
   return [
     {
-      label: "核心价值",
       title: valueLabel,
       text: `${visibleText(item.name)}聚焦${category.tab}流程中的关键判断和执行断点，把${item.systems.join("、") || "核心业务系统"}里的数据、规则和状态统一起来。业务团队不只看到一个提醒，而是能看到原因、影响对象、建议动作和责任闭环。`
     },
     ...metrics.map((metric) => ({
-      label: "价值指标",
       title: metric,
       text: metricExplanation(metric, item, category)
     })),
     {
-      label: "管理可控",
       title: "关键决策保留人工确认",
       text: `${visibleText(item.name)}只负责识别、解释、建议和催办，涉及审批、承诺、放行、付款、法务意见等关键动作仍由负责人确认，既提升效率，也保留管理边界。`
     }
@@ -972,8 +1125,22 @@ tabs.addEventListener("click", (event) => {
 });
 
 grid.addEventListener("click", (event) => {
+  const demoButton = event.target.closest("button[data-demo-agent]");
+  if (demoButton) {
+    event.stopPropagation();
+    openDemoDialog(demoButton.dataset.demoAgent);
+    return;
+  }
   const card = event.target.closest(".agent-card");
   if (card) openAgent(card.dataset.agent);
+});
+
+grid.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest(".agent-card");
+  if (!card || event.target.closest("button")) return;
+  event.preventDefault();
+  openAgent(card.dataset.agent);
 });
 
 agentSearch.addEventListener("input", (event) => {
@@ -984,6 +1151,22 @@ agentSearch.addEventListener("input", (event) => {
 modalClose.addEventListener("click", () => modal.close());
 modal.addEventListener("click", (event) => {
   if (event.target === modal) modal.close();
+});
+modal.addEventListener("close", () => {
+  document.body.classList.remove("modal-open");
+});
+
+demoModalClose.addEventListener("click", () => demoModal.close());
+demoModal.addEventListener("click", (event) => {
+  if (event.target === demoModal) demoModal.close();
+});
+demoModal.addEventListener("close", () => {
+  document.body.classList.remove("modal-open");
+  pendingDemo = null;
+});
+demoModal.addEventListener("click", (event) => {
+  const generateButton = event.target.closest("#demoGenerateButton");
+  if (generateButton) generatePendingDemo();
 });
 
 renderTabs();
