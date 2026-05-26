@@ -4,3 +4,7 @@ Thumbs.db
 node_modules/
 .vscode/
 .cozeproj/reduction
+__pycache__/
+*.pyc
+data/*.db
+data/*.db-*
