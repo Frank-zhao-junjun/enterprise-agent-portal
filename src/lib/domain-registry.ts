@@ -1,5 +1,11 @@
-// === Domain Registry — 领域注册表 ===
-import type { DomainOntology } from '@/types/ontology';
+/**
+ * Domain Registry — 领域注册表
+ * 工具定义从 MCP Server 动态获取，静态数据保留描述/图标/示例问题
+ */
+
+import type { DomainOntology, MCPToolParameter } from '@/types/ontology';
+import { getMCPServer } from './mcp-server/registry';
+import type { MCPToolDefinition } from './mcp-server/protocol';
 
 export const SHARED_CATEGORIES = [
   { id: 'semantic', name: '语义', nameEn: 'Semantic', description: '意图理解、实体识别、语义映射', descriptionEn: 'Intent understanding, entity recognition, semantic mapping' },
@@ -9,7 +15,20 @@ export const SHARED_CATEGORIES = [
   { id: 'api', name: 'API', nameEn: 'API', description: '后端系统集成、数据读写、服务调用', descriptionEn: 'Backend integration, data R/W, service invocation' },
 ] as const;
 
-export const DOMAINS: DomainOntology[] = [
+// ============ 领域元数据（静态） ============
+
+interface DomainMeta {
+  id: string;
+  name: string;
+  nameEn: string;
+  icon: string;
+  description: string;
+  descriptionEn: string;
+  exampleQuestions: string[];
+  exampleQuestionsEn: string[];
+}
+
+const DOMAIN_METAS: DomainMeta[] = [
   {
     id: 'manufacturing',
     name: '制造业',
@@ -17,53 +36,28 @@ export const DOMAINS: DomainOntology[] = [
     icon: '🏭',
     description: '智能制造领域本体，覆盖生产排程、质量管控、设备运维等场景',
     descriptionEn: 'Smart manufacturing ontology covering production scheduling, quality control, and equipment maintenance',
-    transport: { type: 'mock' },
-    tools: [
-      { name: 'ontology_intent_parse', description: '解析用户意图，识别制造场景中的实体和语义', category: 'semantic', parameters: { query: { type: 'string', description: '用户查询文本', required: true } } },
-      { name: 'ontology_plan_execute', description: '制定并执行制造任务计划（排程、质检、维护）', category: 'behavior', parameters: { task_type: { type: 'string', description: '任务类型', required: true } } },
-      { name: 'ontology_event_log', description: '查询生产事件流（质量告警、设备异常、维护到期）', category: 'event', parameters: { severity: { type: 'string', description: '严重级别过滤' } } },
-      { name: 'ontology_rule_validate', description: '校验制造规则合规（安全规程、质量标准、SOP）', category: 'governance', parameters: { rule_set: { type: 'string', description: '规则集标识' } } },
-      { name: 'ontology_api_call', description: '调用后端 MES/ERP 系统 API', category: 'api', parameters: { endpoint: { type: 'string', description: 'API 端点', required: true }, method: { type: 'string', description: 'HTTP 方法' } } },
-    ],
-    categories: SHARED_CATEGORIES.map((c) => ({ ...c, toolCount: 1 })),
-    exampleQuestions: ['L3产线今天的产量达标了吗？', '最近有哪些质量告警？', '设备M7的维护计划是什么？'],
-    exampleQuestionsEn: ['Is the L3 production line meeting today\'s target?', 'What quality alerts have occurred recently?', 'What is the maintenance plan for machine M7?'],
+    exampleQuestions: ['L3产线今天的产量达标了吗？', '最近有哪些质量告警？', '设备R2的维护计划是什么？', '连接MES系统查看工单状态'],
+    exampleQuestionsEn: ['Is the L3 production line meeting today\'s target?', 'What quality alerts have occurred recently?', 'What is the maintenance plan for robot R2?', 'Connect to MES to check work order status'],
   },
   {
     id: 'customer-service',
     name: '客服',
     nameEn: 'Customer Service',
     icon: '🎧',
-    description: '智能客服领域本体，覆盖航班服务、酒店预订、投诉处理等场景',
-    descriptionEn: 'Smart customer service ontology covering flight services, hotel bookings, and complaint handling',
-    transport: { type: 'mock' },
-    tools: [
-      { name: 'ontology_intent_parse', description: '解析客户意图，识别服务场景和请求类型', category: 'semantic', parameters: { query: { type: 'string', description: '客户消息', required: true } } },
-      { name: 'ontology_rule_validate', description: '校验服务规则（退改政策、赔偿标准、升级条件）', category: 'governance', parameters: { scenario: { type: 'string', description: '服务场景' } } },
-      { name: 'ontology_event_log', description: '查询客户服务事件（航班变更、投诉记录、赔偿案例）', category: 'event', parameters: { event_type: { type: 'string', description: '事件类型' } } },
-      { name: 'ontology_api_call', description: '调用后端 CRM/订票系统 API', category: 'api', parameters: { endpoint: { type: 'string', description: 'API 端点', required: true } } },
-    ],
-    categories: SHARED_CATEGORIES.filter((c) => c.id !== 'behavior').map((c) => ({ ...c, toolCount: 1 })),
-    exampleQuestions: ['航班CA1234延误了，我可以申请赔偿吗？', '我想改签到明天的航班', '最近有哪些航班变更通知？'],
-    exampleQuestionsEn: ['Flight CA1234 is delayed, can I claim compensation?', 'I want to change my flight to tomorrow', 'What flight change notifications are there recently?'],
+    description: '智能客服领域本体，覆盖工单处理、客户路由、SLA 管理等场景',
+    descriptionEn: 'Smart customer service ontology covering ticket processing, customer routing, and SLA management',
+    exampleQuestions: ['帮我创建一个退款工单', '哪些工单即将违反 SLA？', '客户张伟的投诉处理了吗？', '连接CRM查看客户信息'],
+    exampleQuestionsEn: ['Create a refund ticket for me', 'Which tickets are about to breach SLA?', 'Has customer Zhang Wei\'s complaint been handled?', 'Connect to CRM to check customer info'],
   },
   {
     id: 'supply-chain',
     name: '供应链',
     nameEn: 'Supply Chain',
     icon: '📦',
-    description: '供应链领域本体，覆盖供应商管理、风险评估、采购决策等场景',
-    descriptionEn: 'Supply chain ontology covering supplier management, risk assessment, and procurement decisions',
-    transport: { type: 'mock' },
-    tools: [
-      { name: 'ontology_intent_parse', description: '解析供应链查询意图，识别供应商、物料、区域等实体', category: 'semantic', parameters: { query: { type: 'string', description: '查询文本', required: true } } },
-      { name: 'ontology_plan_execute', description: '制定采购/物流计划，评估替代方案', category: 'behavior', parameters: { plan_type: { type: 'string', description: '计划类型', required: true } } },
-      { name: 'ontology_rule_validate', description: '校验供应链规则（双源要求、合规检查、ESG 评分）', category: 'governance', parameters: { supplier_id: { type: 'string', description: '供应商 ID' } } },
-      { name: 'ontology_api_call', description: '调用后端 ERP/WMS 系统 API', category: 'api', parameters: { endpoint: { type: 'string', description: 'API 端点', required: true } } },
-    ],
-    categories: SHARED_CATEGORIES.filter((c) => c.id !== 'event').map((c) => ({ ...c, toolCount: 1 })),
-    exampleQuestions: ['供应商A的ESG评分是多少？', '帮我制定备选采购方案', '当前供应链合规检查结果如何？'],
-    exampleQuestionsEn: ['What is the ESG score of supplier A?', 'Help me create an alternative procurement plan', 'What are the current supply chain compliance check results?'],
+    description: '供应链领域本体，覆盖库存管理、物流调度、供应商评估等场景',
+    descriptionEn: 'Supply chain ontology covering inventory management, logistics scheduling, and supplier assessment',
+    exampleQuestions: ['当前有哪些物料库存不足？', '物流延迟怎么处理？', '供应商合规检查结果如何？', '连接WMS查看仓库利用率'],
+    exampleQuestionsEn: ['Which materials are running low?', 'How to handle logistics delays?', 'What are the supplier compliance check results?', 'Connect to WMS to check warehouse utilization'],
   },
   {
     id: 'general',
@@ -72,21 +66,70 @@ export const DOMAINS: DomainOntology[] = [
     icon: '💬',
     description: '通用对话兜底，处理闲聊和不属于特定领域的请求',
     descriptionEn: 'General conversation fallback for chitchat and non-domain requests',
-    transport: { type: 'mock' },
-    tools: [
-      { name: 'ontology_intent_parse', description: '基础意图解析', category: 'semantic', parameters: { query: { type: 'string', description: '用户消息', required: true } } },
-    ],
-    categories: [{ ...SHARED_CATEGORIES[0], toolCount: 1 }],
     exampleQuestions: ['你好，你能做什么？', '帮我解释一下什么是本体模型'],
     exampleQuestionsEn: ['Hello, what can you do?', 'Explain what an ontology model is'],
   },
 ];
 
-export function getDomainById(id: string): DomainOntology | undefined {
-  return DOMAINS.find((d) => d.id === id);
+// ============ 工具定义转换 ============
+
+function mcpToolToDomainTool(tool: MCPToolDefinition): DomainOntology['tools'][number] {
+  return {
+    name: tool.name,
+    description: tool.description,
+    category: tool.category,
+    parameters: Object.fromEntries(
+      Object.entries(tool.parameters).map(([k, v]) => [k, {
+        type: v.type as MCPToolParameter['type'],
+        description: v.description,
+        required: v.required,
+        ...(v.enum ? { enum: v.enum } : {}),
+      }])
+    ) as Record<string, MCPToolParameter>,
+  };
 }
 
-export const ALL_DOMAINS = DOMAINS;
+function buildCategories(tools: MCPToolDefinition[]): DomainOntology['categories'] {
+  return SHARED_CATEGORIES.map((c) => ({
+    ...c,
+    toolCount: tools.filter((t) => t.category === c.id).length,
+  }));
+}
+
+// ============ 动态领域构建 ============
+
+/**
+ * 获取所有领域（从 MCP Server 注册表动态获取工具）
+ */
+export function getAllDomains(): DomainOntology[] {
+  return DOMAIN_METAS.map((meta) => {
+    const server = getMCPServer(meta.id);
+    const toolDefs = server ? server.getToolDefinitions() : [];
+
+    return {
+      id: meta.id,
+      name: meta.name,
+      nameEn: meta.nameEn,
+      icon: meta.icon,
+      description: meta.description,
+      descriptionEn: meta.descriptionEn,
+      transport: { type: 'http' as const },
+      tools: toolDefs.map(mcpToolToDomainTool),
+      categories: buildCategories(toolDefs),
+      exampleQuestions: meta.exampleQuestions,
+      exampleQuestionsEn: meta.exampleQuestionsEn,
+    };
+  });
+}
+
+/**
+ * 按ID获取领域
+ */
+export function getDomainById(id: string): DomainOntology | undefined {
+  return getAllDomains().find((d) => d.id === id);
+}
+
+export const ALL_DOMAINS = getAllDomains();
 
 export function getToolByName(domainId: string, toolName: string) {
   const domain = getDomainById(domainId);

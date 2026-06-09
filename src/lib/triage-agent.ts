@@ -1,15 +1,18 @@
-// === Triage Agent — LLM 驱动意图分类 + 领域路由 + 工具调用 ===
+/**
+ * Triage Agent — LLM 驱动意图分类 + 领域路由 + MCP 工具调用
+ *
+ * 数据流: 用户输入 → LLM 意图分类 → 领域路由 → MCP 工具调用 → LLM 流式回复
+ */
+
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
-import type { NextRequest } from 'next/server';
 import type { DomainRouteResult, LLMMessage, ReasoningStep, MCPToolResult } from '@/types/ontology';
-import { DOMAINS, getDomainById } from './domain-registry';
-import { createMCPClient } from './mcp-client';
+import { getDomainById, getAllDomains } from './domain-registry';
+import { createHTTPMCPClient, createMockMCPClient } from './mcp-client';
 
 // ============================================================
 // LLM 调用封装 (coze-coding-dev-sdk)
 // ============================================================
 
-/** 创建 LLM 客户端（可传入 NextRequest headers 用于转发） */
 function createLLMClient(requestHeaders?: Headers): LLMClient {
   const config = new Config();
   const customHeaders = requestHeaders
@@ -18,7 +21,6 @@ function createLLMClient(requestHeaders?: Headers): LLMClient {
   return new LLMClient(config, customHeaders);
 }
 
-/** 非流式 LLM 调用 */
 async function callLLM(
   messages: LLMMessage[],
   options?: { model?: string; temperature?: number; requestHeaders?: Headers },
@@ -31,7 +33,6 @@ async function callLLM(
   return response.content;
 }
 
-/** 流式 LLM 调用，逐 chunk 回调 */
 async function callLLMStream(
   messages: LLMMessage[],
   onChunk: (chunk: string) => void,
@@ -59,7 +60,8 @@ async function callLLMStream(
 // ============================================================
 
 function buildClassificationPrompt(userMessage: string, locale: string): LLMMessage[] {
-  const domainList = DOMAINS.map(
+  const domains = getAllDomains();
+  const domainList = domains.map(
     (d) => `- ${d.id}: ${locale === 'zh' ? d.name : d.nameEn} — ${locale === 'zh' ? d.description : d.descriptionEn}`,
   ).join('\n');
 
@@ -105,8 +107,10 @@ function buildResponsePrompt(
 ): LLMMessage[] {
   const domain = getDomainById(route.domainId);
   const domainName = locale === 'zh' ? (domain?.name ?? '通用') : (domain?.nameEn ?? 'General');
+
+  // 工具结果现在是 { content: string } 格式
   const resultsText = toolResults
-    .map((tr) => `### ${tr.toolName}\n\`\`\`json\n${JSON.stringify(tr.result.data, null, 2)}\n\`\`\``)
+    .map((tr) => `### ${tr.toolName}\n\`\`\`json\n${tr.result.content}\n\`\`\``)
     .join('\n\n');
 
   return [
@@ -119,6 +123,7 @@ Based on the tool results below, provide a clear, helpful response to the user.
 - Reference the specific data from tool results
 - If there are issues (violations, alerts, errors), highlight them
 - Keep the response concise but informative
+- Format with markdown for readability
 
 Domain: ${domainName} (${route.domainId})
 Confidence: ${(route.confidence * 100).toFixed(0)}%
@@ -129,6 +134,28 @@ Reasoning: ${route.reasoning}`,
       content: `${userMessage}\n\n--- Tool Results ---\n${resultsText || '(no tool results)'}`,
     },
   ];
+}
+
+// ============================================================
+// MCP 客户端创建
+// ============================================================
+
+async function getMCPClientForDomain(domainId: string) {
+  const domain = getDomainById(domainId);
+
+  // 尝试使用 HTTP Transport 连接真实 MCP Server
+  if (domain && domainId !== 'general') {
+    try {
+      const client = await createHTTPMCPClient(domainId);
+      return client;
+    } catch (err) {
+      console.warn(`[Triage] HTTP MCP failed for ${domainId}, falling back to mock:`, err);
+    }
+  }
+
+  // Fallback to Mock client
+  const domainData = getDomainById(domainId);
+  return createMockMCPClient(domainId, domainData?.tools ?? []);
 }
 
 // ============================================================
@@ -171,24 +198,20 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
   let route: DomainRouteResult;
 
   if (forcedDomainId) {
-    // 用户手动指定了领域，跳过分类
     const domain = getDomainById(forcedDomainId);
     route = {
       domainId: forcedDomainId,
       confidence: 1.0,
-      reasoning:
-        locale === 'zh'
-          ? `用户手动选择领域: ${domain?.name ?? forcedDomainId}`
-          : `User selected domain: ${domain?.nameEn ?? forcedDomainId}`,
+      reasoning: locale === 'zh'
+        ? `用户手动选择领域: ${domain?.name ?? forcedDomainId}`
+        : `User selected domain: ${domain?.nameEn ?? forcedDomainId}`,
       toolsToCall: domain?.tools.map((t) => t.name).slice(0, 3) ?? ['ontology_intent_parse'],
     };
   } else {
-    // LLM 驱动意图分类
     try {
       const classifyMessages = buildClassificationPrompt(userMessage, locale);
       const classifyResult = await callLLM(classifyMessages, { requestHeaders });
 
-      // 解析 LLM 返回的 JSON
       let parsed: DomainRouteResult;
       try {
         const jsonMatch = classifyResult.match(/\{[\s\S]*\}/);
@@ -202,7 +225,6 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
         };
       }
 
-      // 验证 domainId 有效
       if (!getDomainById(parsed.domainId)) {
         parsed.domainId = 'general';
         parsed.confidence = 0.3;
@@ -219,7 +241,6 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
     }
   }
 
-  // 完成意图步骤
   intentStep.status = 'completed';
   intentStep.result = { domainId: route.domainId, confidence: route.confidence, reasoning: route.reasoning };
   intentStep.duration = Date.now() - stepTimestamp;
@@ -227,11 +248,12 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
   onStep({ ...intentStep });
 
   // === Step 2: 路由 ===
+  const domain = getDomainById(route.domainId);
   const routingStep: ReasoningStep = {
     id: `step-route-${Date.now()}`,
     type: 'routing',
-    title: `路由到${getDomainById(route.domainId)?.name ?? '通用'}领域`,
-    titleEn: `Routing to ${getDomainById(route.domainId)?.nameEn ?? 'General'} domain`,
+    title: `路由到${domain?.name ?? '通用'}领域`,
+    titleEn: `Routing to ${domain?.nameEn ?? 'General'} domain`,
     status: 'completed',
     result: { domainId: route.domainId, toolsToCall: route.toolsToCall },
     timestamp: Date.now(),
@@ -242,11 +264,10 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
   steps.push(routingStep);
 
   // === Step 3: MCP 工具调用 ===
-  const domain = getDomainById(route.domainId);
   const toolResults: Array<{ toolName: string; result: MCPToolResult }> = [];
 
-  if (domain) {
-    const client = createMCPClient(domain.id, domain.transport, domain.tools);
+  if (route.domainId !== 'general') {
+    const mcpClient = await getMCPClientForDomain(route.domainId);
 
     for (const toolName of route.toolsToCall) {
       const toolStartTime = Date.now();
@@ -265,11 +286,13 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
       steps.push(toolStep);
 
       try {
-        const result = await client.callTool(toolName, { query: userMessage });
+        // 根据 toolName 决定传什么参数
+        const toolArgs = buildToolArgs(toolName, userMessage, route);
+        const result = await mcpClient.callTool(toolName, toolArgs);
         toolResults.push({ toolName, result });
 
         toolStep.status = 'completed';
-        toolStep.result = result.data as Record<string, unknown>;
+        toolStep.result = safeParseJSON(result.content);
         toolStep.duration = Date.now() - toolStartTime;
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -325,8 +348,80 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
 }
 
 // ============================================================
-// Fallback 回复生成
+// 工具参数构建
 // ============================================================
+
+function buildToolArgs(
+  toolName: string,
+  userMessage: string,
+  route: DomainRouteResult,
+): Record<string, unknown> {
+  // 语义类工具：传入 query
+  if (toolName.includes('intent_parse')) {
+    return { query: userMessage };
+  }
+
+  // 行为类工具：根据领域推断 task_type
+  if (toolName.includes('plan_execute')) {
+    const taskTypeMap: Record<string, string> = {
+      manufacturing: 'production_schedule',
+      'customer-service': 'create_ticket',
+      'supply-chain': 'inventory_check',
+    };
+    return { task_type: taskTypeMap[route.domainId] ?? 'general' };
+  }
+
+  // 事件类工具
+  if (toolName.includes('event_log')) {
+    return { event_type: 'all', limit: 10 };
+  }
+
+  // 治理类工具
+  if (toolName.includes('governance_check')) {
+    const checkTypeMap: Record<string, string> = {
+      manufacturing: 'compliance',
+      'customer-service': 'sla',
+      'supply-chain': 'supplier_compliance',
+    };
+    return { check_type: checkTypeMap[route.domainId] ?? 'compliance' };
+  }
+
+  // API 连接类工具
+  if (toolName.includes('api_connect')) {
+    const systemMap: Record<string, string> = {
+      manufacturing: 'mes',
+      'customer-service': 'crm',
+      'supply-chain': 'erp',
+    };
+    return { system: systemMap[route.domainId] ?? 'erp', action: 'status' };
+  }
+
+  // 供应链特有工具
+  if (toolName.includes('supply_chain_event_log')) {
+    return { event_type: 'all', limit: 10 };
+  }
+  if (toolName.includes('supply_chain_governance_check')) {
+    return { check_type: 'supplier_compliance' };
+  }
+  if (toolName.includes('supply_chain_api_connect')) {
+    return { system: 'erp', action: 'status' };
+  }
+
+  // 通用 fallback
+  return { query: userMessage };
+}
+
+// ============================================================
+// 辅助函数
+// ============================================================
+
+function safeParseJSON(content: string): Record<string, unknown> {
+  try {
+    return JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return { rawContent: content };
+  }
+}
 
 function generateFallbackResponse(
   route: DomainRouteResult,
@@ -343,16 +438,15 @@ function generateFallbackResponse(
     if (toolResults.length > 0) {
       for (const { toolName, result } of toolResults) {
         resp += `**${toolName}**:\n`;
-        if (result.success) {
-          resp += `- ${JSON.stringify(result.data, null, 2)}\n`;
+        if (result.isError) {
+          resp += `- 错误: ${result.content}\n`;
         } else {
-          resp += `- 错误: ${result.error ?? 'unknown'}\n`;
+          resp += `- ${result.content}\n`;
         }
       }
     } else {
       resp += '暂无工具调用结果。\n';
     }
-
     return resp;
   }
 
@@ -362,10 +456,10 @@ function generateFallbackResponse(
   if (toolResults.length > 0) {
     for (const { toolName, result } of toolResults) {
       resp += `**${toolName}**:\n`;
-      if (result.success) {
-        resp += `- ${JSON.stringify(result.data, null, 2)}\n`;
+      if (result.isError) {
+        resp += `- Error: ${result.content}\n`;
       } else {
-        resp += `- Error: ${result.error ?? 'unknown'}\n`;
+        resp += `- ${result.content}\n`;
       }
     }
   } else {

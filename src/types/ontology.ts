@@ -2,7 +2,7 @@
 
 /** MCP Transport 接口 — 可插拔传输层 */
 export interface MCPTransport {
-  type: 'mock' | 'stdio' | 'sse' | 'streamable-http';
+  type: 'mock' | 'http' | 'stdio' | 'sse' | 'streamable-http';
   serverUrl?: string;
   headers?: Record<string, string>;
 }
@@ -20,6 +20,7 @@ export interface MCPToolParameter {
   description: string;
   required?: boolean;
   default?: unknown;
+  enum?: string[];
 }
 
 /** 本体领域定义 */
@@ -99,10 +100,10 @@ export interface DomainRouteResult {
 
 /** MCP 工具调用结果 */
 export interface MCPToolResult {
-  success: boolean;
-  data: Record<string, unknown>;
-  error?: string;
-  duration: number;
+  content: string;
+  isError?: boolean;
+  metadata?: Record<string, unknown>;
+  duration?: number;
 }
 
 /** SSE 事件 */
