@@ -1,8 +1,8 @@
-# Ontology Hub — 项目规范
+# 企业 Agent 平台 — 项目规范
 
 ## 项目概览
 
-Ontology Hub 是一个前端主 Agent 系统，通过 MCP 协议调用不同领域的本体模型 Server，为用户提供智能问答服务。采用 Hub-and-Spoke 架构，Triage Agent 作为唯一入口路由到专业领域。
+企业 Agent 平台（Enterprise Agent Portal）是一个统一入口系统，主 Agent 通过 MCP 协议调用不同领域的本体模型 Server，为用户提供智能问答服务。采用 Hub-and-Spoke 架构，Triage Agent 作为唯一入口路由到专业领域。
 
 ### 版本技术栈
 

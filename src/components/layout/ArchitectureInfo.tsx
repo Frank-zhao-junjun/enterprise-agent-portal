@@ -32,8 +32,8 @@ export function ArchitectureInfo() {
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
               {locale === 'zh'
-                ? '前端主 Agent 通过 MCP 协议调用不同领域的本体模型'
-                : 'Frontend main agent calling domain ontologies via MCP'}
+                ? '企业 Agent 平台：主 Agent 通过 MCP 协议调用不同领域的本体模型'
+                : 'Enterprise Agent Portal: main agent calling domain ontologies via MCP'}
             </p>
           </div>
           <button

@@ -4,14 +4,14 @@ import { AppProvider } from '@/contexts/app-context';
 import { Header } from '@/components/layout/Header';
 
 export const metadata: Metadata = {
-  title: 'Ontology Hub · Multi-Domain Agent',
-  description: 'Frontend main agent that calls different domain ontology models via MCP',
-  keywords: ['ontology', 'agent', 'MCP', 'multi-domain', 'AI', 'semantic'],
+  title: '企业 Agent 平台 · Enterprise Agent Portal',
+  description: 'Enterprise agent portal — unified entry calling domain ontologies via MCP',
+  keywords: ['agent', 'enterprise', 'MCP', 'multi-domain', 'AI', 'ontology', 'semantic'],
   authors: [{ name: 'Frank Zhao', url: 'https://github.com/Frank-zhao-junjun' }],
   icons: { icon: '/favicon.ico' },
   openGraph: {
-    title: 'Ontology Hub',
-    description: 'Frontend main agent calling domain ontologies via MCP',
+    title: '企业 Agent 平台',
+    description: 'Enterprise agent portal — unified entry calling domain ontologies via MCP',
     type: 'website',
   },
 };

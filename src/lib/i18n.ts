@@ -9,10 +9,10 @@ export type Locale = 'zh' | 'en';
 
 export const dictionaries: Record<string, Record<Locale, string>> = {
   // 顶部
-  app_title: { zh: '本体中枢 · 多领域 Agent', en: 'Ontology Hub · Multi-Domain Agent' },
+  app_title: { zh: '企业 Agent 平台', en: 'Enterprise Agent Portal' },
   app_subtitle: {
-    zh: '前端主 Agent，通过 MCP 调用不同领域本体模型',
-    en: 'Frontend main agent calling domain ontologies via MCP',
+    zh: '统一入口：主 Agent 通过 MCP 调用不同领域本体模型',
+    en: 'Unified entry: main agent calling domain ontologies via MCP',
   },
 
   // 侧边栏 - 领域列表
