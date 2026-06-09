@@ -1,62 +1,84 @@
+// === POST /api/chat — 真正的流式 SSE 聊天 API ===
 import { NextRequest } from 'next/server';
 import { runMainAgent } from '@/lib/triage-agent';
+import type { ReasoningStep } from '@/types/ontology';
 
-/**
- * 主聊天 API
- * POST /api/chat
- * 接收用户消息，调用主 Agent 处理，返回 SSE 流式响应
- */
-export async function POST(req: NextRequest) {
-  let body: { message?: string; forcedDomainId?: string; locale?: 'zh' | 'en' } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+/** SSE 事件类型 */
+interface SSEEvent {
+  type: 'reasoning' | 'content' | 'error' | 'done';
+  data: unknown;
+}
+
+// 会话存储（内存级，生产环境应替换为 Redis/DB）
+const sessions = new Map<string, { history: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> }>();
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { message, sessionId, forcedDomainId, locale = 'zh' } = body as {
+    message: string;
+    sessionId?: string;
+    forcedDomainId?: string;
+    locale?: string;
+  };
+
+  if (!message || typeof message !== 'string') {
+    return new Response(JSON.stringify({ error: 'message is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const message = body.message?.trim();
-  if (!message) {
-    return new Response(
-      JSON.stringify({ error: 'Message is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  const sid = sessionId || `session-${Date.now()}`;
 
-  const locale = body.locale === 'en' ? 'en' : 'zh';
+  // 获取或创建会话
+  if (!sessions.has(sid)) {
+    sessions.set(sid, { history: [] });
+  }
+  const session = sessions.get(sid)!;
 
   // 创建 SSE 流
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      try {
-        // 调用主 Agent
-        const { reasoning, response, domainId } = await runMainAgent(message, locale);
-
-        // 发送推理链每个步骤
-        for (const step of reasoning) {
-          const event = `event: reasoning\ndata: ${JSON.stringify(step)}\n\n`;
-          controller.enqueue(encoder.encode(event));
-          // 小延迟让前端有时间显示
-          await new Promise((r) => setTimeout(r, 100));
+      const sendEvent = (event: SSEEvent) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } catch {
+          // controller might be closed
         }
+      };
 
-        // 发送最终响应
-        const doneEvent = `event: done\ndata: ${JSON.stringify({
-          fullContent: response,
-          reasoningChain: reasoning,
-          domainId,
-        })}\n\n`;
-        controller.enqueue(encoder.encode(doneEvent));
+      try {
+        // 运行主 Agent，每步即时推送
+        const { response, updatedHistory, domainId } = await runMainAgent({
+          userMessage: message,
+          sessionId: sid,
+          forcedDomainId: forcedDomainId || null,
+          locale,
+          history: session.history,
+          onStep: (step: ReasoningStep) => {
+            sendEvent({ type: 'reasoning', data: step });
+          },
+          onChunk: (chunk: string) => {
+            sendEvent({ type: 'content', data: { chunk } });
+          },
+          requestHeaders: request.headers,
+        });
 
-        controller.close();
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorEvent = `event: error\ndata: ${JSON.stringify({ message: errorMessage })}\n\n`;
-        controller.enqueue(encoder.encode(errorEvent));
-        controller.close();
+        // 保存对话历史
+        session.history = updatedHistory.slice(-20); // 保留最近 20 条
+
+        // 发送完成事件
+        sendEvent({ type: 'done', data: { response, sessionId: sid, domainId } });
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        sendEvent({ type: 'error', data: { error: errorMsg } });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
       }
     },
   });

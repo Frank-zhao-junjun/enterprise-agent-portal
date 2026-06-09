@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/app-context';
-import { t, getReasoningStepTitle, getCategoryColor, formatTime } from '@/lib/i18n';
+import { t, formatTime } from '@/lib/i18n';
 import { ALL_DOMAINS, getDomainById } from '@/lib/domain-registry';
 import type { ChatMessage, ReasoningStep, DomainOntology } from '@/types/ontology';
 import { DomainSelector } from '@/components/domain-selector/DomainSelector';
@@ -19,7 +19,6 @@ import {
   Bot,
   User,
   Loader2,
-  Wrench,
   Lightbulb,
   Layers,
 } from 'lucide-react';
@@ -91,57 +90,62 @@ export function ChatClient() {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
 
-          for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              const eventType = line.slice(7).trim();
-              const dataLine = lines[lines.indexOf(line) + 1];
-              if (dataLine?.startsWith('data: ')) {
-                const data = dataLine.slice(6);
-                if (eventType === 'reasoning') {
-                  try {
-                    const step: ReasoningStep = JSON.parse(data);
-                    reasoningSteps.push(step);
-                    dispatch({
-                      type: 'UPDATE_CHAT_MESSAGE',
-                      messageId: agentMessageId,
-                      updates: { reasoning: [...reasoningSteps] },
-                    });
-                  } catch (e) {
-                    console.error('Failed to parse reasoning step', e);
-                  }
-                } else if (eventType === 'done') {
-                  try {
-                    const parsed = JSON.parse(data);
-                    accumulatedContent = parsed.fullContent;
-                    dispatch({
-                      type: 'UPDATE_CHAT_MESSAGE',
-                      messageId: agentMessageId,
-                      updates: {
-                        content: accumulatedContent,
-                        domainId: parsed.domainId,
-                        reasoning: parsed.reasoningChain,
-                      },
-                    });
-                  } catch (e) {
-                    console.error('Failed to parse done event', e);
-                  }
-                } else if (eventType === 'error') {
-                  try {
-                    const parsed = JSON.parse(data);
-                    dispatch({
-                      type: 'UPDATE_CHAT_MESSAGE',
-                      messageId: agentMessageId,
-                      updates: { content: `${t('error_general', locale)}: ${parsed.message}` },
-                    });
-                  } catch (e) {
-                    console.error('Failed to parse error event', e);
-                  }
+          // 解析 SSE：每个事件格式为 `data: {...}\n\n`
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || ''; // 最后一部分可能不完整，保留
+
+          for (const part of parts) {
+            const lines = part.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+
+              const jsonStr = line.slice(6);
+              try {
+                const event = JSON.parse(jsonStr) as {
+                  type: 'reasoning' | 'content' | 'error' | 'done';
+                  data: unknown;
+                };
+
+                if (event.type === 'reasoning') {
+                  const step = event.data as ReasoningStep;
+                  reasoningSteps.push(step);
+                  dispatch({
+                    type: 'UPDATE_CHAT_MESSAGE',
+                    messageId: agentMessageId,
+                    updates: { reasoning: [...reasoningSteps] },
+                  });
+                } else if (event.type === 'content') {
+                  const data = event.data as { chunk: string };
+                  accumulatedContent += data.chunk;
+                  dispatch({
+                    type: 'UPDATE_CHAT_MESSAGE',
+                    messageId: agentMessageId,
+                    updates: { content: accumulatedContent },
+                  });
+                } else if (event.type === 'done') {
+                  const data = event.data as { response?: string; sessionId?: string; domainId?: string };
+                  dispatch({
+                    type: 'UPDATE_CHAT_MESSAGE',
+                    messageId: agentMessageId,
+                    updates: {
+                      content: data.response || accumulatedContent,
+                      domainId: data.domainId,
+                      reasoning: [...reasoningSteps],
+                    },
+                  });
+                } else if (event.type === 'error') {
+                  const data = event.data as { error: string };
+                  dispatch({
+                    type: 'UPDATE_CHAT_MESSAGE',
+                    messageId: agentMessageId,
+                    updates: {
+                      content: `${t('error_general', locale)}: ${data.error}`,
+                    },
+                  });
                 }
-                // 跳过 data 行
-                lines.splice(lines.indexOf(dataLine), 1);
+              } catch (e) {
+                console.error('Failed to parse SSE event', e);
               }
             }
           }
@@ -338,7 +342,11 @@ function DomainExampleCard({
 }) {
   const { state } = useApp();
   const locale = state.locale;
-  const examples = locale === 'zh' ? domain.exampleQuestions : domain.exampleQuestionsEn;
+  const examples = domain.exampleQuestions?.length
+    ? locale === 'zh'
+      ? domain.exampleQuestions
+      : domain.exampleQuestionsEn ?? domain.exampleQuestions
+    : [];
   const name = locale === 'zh' ? domain.name : domain.nameEn;
   const desc = locale === 'zh' ? domain.description : domain.descriptionEn;
 
@@ -356,18 +364,20 @@ function DomainExampleCard({
           {domain.tools.length} {t('tools_count', locale)}
         </span>
       </div>
-      <div className="space-y-1.5">
-        {examples.map((q, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(q)}
-            className="w-full text-left text-sm px-3 py-2 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-colors flex items-center gap-2 group"
-          >
-            <Lightbulb className="size-3 text-muted-foreground group-hover:text-primary flex-shrink-0" />
-            <span className="text-foreground/80 group-hover:text-foreground">{q}</span>
-          </button>
-        ))}
-      </div>
+      {examples.length > 0 && (
+        <div className="space-y-1.5">
+          {examples.map((q, i) => (
+            <button
+              key={i}
+              onClick={() => onSelect(q)}
+              className="w-full text-left text-sm px-3 py-2 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-colors flex items-center gap-2 group"
+            >
+              <Lightbulb className="size-3 text-muted-foreground group-hover:text-primary flex-shrink-0" />
+              <span className="text-foreground/80 group-hover:text-foreground">{q}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

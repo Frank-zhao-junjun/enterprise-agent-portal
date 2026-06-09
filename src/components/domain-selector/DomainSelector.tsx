@@ -110,7 +110,7 @@ function ToolList({ domain }: { domain: DomainOntology }) {
   return (
     <div className="px-3 pb-3 space-y-1.5 border-t border-border/30 pt-2">
       {domain.tools.map((tool) => (
-        <ToolCard key={tool.id} tool={tool} />
+        <ToolCard key={tool.name} tool={tool} />
       ))}
     </div>
   );
@@ -120,8 +120,6 @@ function ToolList({ domain }: { domain: DomainOntology }) {
 function ToolCard({ tool }: { tool: MCPTool }) {
   const { state } = useApp();
   const locale = state.locale;
-  const name = locale === 'zh' ? tool.name : tool.nameEn;
-  const desc = locale === 'zh' ? tool.description : tool.descriptionEn;
   return (
     <div className="rounded-lg border border-border/40 bg-background/50 p-2.5">
       <div className="flex items-center gap-2 mb-1">
@@ -130,9 +128,9 @@ function ToolCard({ tool }: { tool: MCPTool }) {
         >
           {getToolCategoryName(tool.category, locale)}
         </span>
-        <span className="text-xs font-mono text-foreground/80">{name}</span>
+        <span className="text-xs font-mono text-foreground/80">{tool.name}</span>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{tool.description}</p>
     </div>
   );
 }

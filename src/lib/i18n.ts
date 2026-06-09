@@ -122,9 +122,11 @@ export function ts(key: string, locale: Locale = 'zh'): string {
 /** 获取推理步骤标题 */
 export function getReasoningStepTitle(type: ReasoningStepType, locale: Locale): string {
   const map: Record<ReasoningStepType, string> = {
-    intent_recognition: 'step_intent_recognition',
-    domain_routing: 'step_domain_routing',
-    mcp_call: 'step_mcp_call',
+    intent: 'step_intent_recognition',
+    routing: 'step_domain_routing',
+    tool_call: 'step_mcp_call',
+    tool_result: 'step_mcp_call',
+    guardrail: 'step_governance_check',
     semantic_lookup: 'step_semantic_lookup',
     rule_reasoning: 'step_rule_reasoning',
     event_emit: 'step_event_emit',
@@ -133,7 +135,7 @@ export function getReasoningStepTitle(type: ReasoningStepType, locale: Locale): 
     aggregation: 'step_aggregation',
     response: 'step_response',
   };
-  return t(map[type], locale);
+  return t(map[type] ?? type, locale);
 }
 
 /** 获取工具分类名称 */

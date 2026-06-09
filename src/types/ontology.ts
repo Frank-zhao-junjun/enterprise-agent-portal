@@ -1,143 +1,127 @@
-/**
- * 本体领域模型类型定义
- * Ontology Domain Model Type Definitions
- *
- * 参考：ontology-platform/docs/PRD-本体模型语义行为事件平台-v1.0.md
- * 参考：ontology-platform/docs/mcp-agent-ontology-interaction.md
- */
+// === Ontology Hub - Core Type Definitions ===
 
-/** MCP 工具参数 */
-export interface MCPToolParameter {
+/** MCP Transport 接口 — 可插拔传输层 */
+export interface MCPTransport {
+  type: 'mock' | 'stdio' | 'sse' | 'streamable-http';
+  serverUrl?: string;
+  headers?: Record<string, string>;
+}
+
+/** 本体领域中的工具定义 */
+export interface MCPTool {
   name: string;
+  description: string;
+  category: 'semantic' | 'behavior' | 'event' | 'governance' | 'api';
+  parameters?: Record<string, MCPToolParameter>;
+}
+
+export interface MCPToolParameter {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';
   description: string;
-  required: boolean;
-  defaultValue?: string | number | boolean | null;
+  required?: boolean;
+  default?: unknown;
 }
 
-/** MCP 工具定义 */
-export interface MCPTool {
-  id: string;
-  name: string;
-  nameEn: string;
-  description: string;
-  descriptionEn: string;
-  category: 'semantic' | 'behavior' | 'event' | 'governance' | 'api';
-  parameters: MCPToolParameter[];
-  /** 示例输入 */
-  example: {
-    input: Record<string, unknown>;
-    output: Record<string, unknown>;
-  };
-}
-
-/** 本体领域 */
+/** 本体领域定义 */
 export interface DomainOntology {
   id: string;
-  /** 领域名称（中文） */
   name: string;
-  /** 领域名称（英文） */
   nameEn: string;
-  /** 领域描述（中文） */
-  description: string;
-  /** 领域描述（英文） */
-  descriptionEn: string;
-  /** 领域图标（Lucide icon name） */
   icon: string;
-  /** 领域颜色（Tailwind class） */
-  color: string;
-  /** MCP Server 地址（演示用 mock URL） */
-  mcpServerUrl: string;
-  /** 该领域提供的 MCP 工具列表 */
+  description: string;
+  descriptionEn: string;
+  transport: MCPTransport;
   tools: MCPTool[];
-  /** 适用场景（中文） */
-  applicableScenarios: string[];
-  /** 适用场景（英文） */
-  applicableScenariosEn: string[];
-  /** 预置示例问题 */
-  exampleQuestions: string[];
-  /** 预置示例问题（英文） */
-  exampleQuestionsEn: string[];
+  categories: OntologyCategory[];
+  exampleQuestions?: string[];
+  exampleQuestionsEn?: string[];
 }
 
-/** 推理链步骤类型 */
-export type ReasoningStepType =
-  | 'intent_recognition' // 意图识别
-  | 'domain_routing'     // 领域路由
-  | 'mcp_call'           // MCP 工具调用
-  | 'semantic_lookup'    // 语义查询
-  | 'rule_reasoning'     // 规则推理
-  | 'event_emit'         // 事件发布
-  | 'governance_check'   // 治理检查
-  | 'api_invoke'         // 后端 API 调用
-  | 'aggregation'        // 结果聚合
-  | 'response';          // 最终回复
+/** 本体能力类别 */
+export interface OntologyCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  descriptionEn: string;
+  toolCount: number;
+}
 
-/** 推理链步骤 */
+/** 推理步骤 */
 export interface ReasoningStep {
-  /** 步骤序号 */
-  step: number;
-  /** 步骤类型 */
+  id: string;
   type: ReasoningStepType;
-  /** 步骤标题 */
   title: string;
-  /** 步骤标题（英文） */
   titleEn: string;
-  /** 步骤内容/输出 */
-  content: string;
-  /** 步骤内容/输出（英文） */
-  contentEn: string;
-  /** 调用的 MCP 工具名（如有） */
+  args?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  duration?: number; // ms
+  domain?: string;
   toolName?: string;
-  /** 工具参数（如有） */
-  toolArgs?: Record<string, unknown>;
-  /** 工具返回结果（如有） */
-  toolResult?: Record<string, unknown>;
-  /** 时间戳 */
   timestamp: number;
-  /** 执行耗时（ms） */
-  durationMs?: number;
-  /** 置信度 0-1 */
-  confidence?: number;
 }
+
+export type ReasoningStepType = 'intent' | 'routing' | 'tool_call' | 'tool_result' | 'guardrail' | 'response' | 'semantic_lookup' | 'rule_reasoning' | 'event_emit' | 'governance_check' | 'api_invoke' | 'aggregation';
 
 /** 聊天消息 */
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'agent';
+  role: 'user' | 'assistant' | 'system' | 'agent';
   content: string;
-  /** 关联的领域 ID */
-  domainId?: string;
-  /** 推理链步骤 */
-  reasoning?: ReasoningStep[];
-  /** 时间戳 */
   timestamp: number;
+  reasoning?: ReasoningStep[];
+  domainId?: string;
+  isStreaming?: boolean;
 }
 
-/** 聊天会话 */
+/** 会话 */
 export interface ChatSession {
   id: string;
-  messages: ChatMessage[];
-  /** 当前激活的领域 */
-  activeDomainId?: string;
-  /** 创建时间 */
   createdAt: number;
+  messages: ChatMessage[];
+  history: LLMMessage[]; // LLM 对话历史
 }
 
-/** 聊天 API 请求 */
-export interface ChatRequest {
-  message: string;
-  /** 强制指定领域（可选，让 Triage Agent 自动选择） */
-  forcedDomainId?: string;
-  /** 会话 ID（用于多轮对话上下文） */
-  sessionId?: string;
-  /** 语言 */
-  locale: 'zh' | 'en';
+/** LLM 消息格式 */
+export interface LLMMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
 }
 
-/** 聊天 API 响应（SSE 事件） */
-export type ChatSSEEvent =
-  | { type: 'reasoning'; step: ReasoningStep }
-  | { type: 'content'; delta: string }
-  | { type: 'done'; fullContent: string; reasoningChain: ReasoningStep[]; domainId: string }
-  | { type: 'error'; message: string };
+/** 领域路由结果 */
+export interface DomainRouteResult {
+  domainId: string;
+  confidence: number;
+  reasoning: string;
+  toolsToCall: string[];
+}
+
+/** MCP 工具调用结果 */
+export interface MCPToolResult {
+  success: boolean;
+  data: Record<string, unknown>;
+  error?: string;
+  duration: number;
+}
+
+/** SSE 事件 */
+export interface SSEEvent {
+  type: 'reasoning' | 'content' | 'error' | 'done';
+  data: unknown;
+}
+
+/** App 状态 */
+export interface AppState {
+  locale: 'en' | 'zh';
+  activeDomainId: string | null;
+  isThinking: boolean;
+  sessionId: string;
+}
+
+/** App Action */
+export type AppAction =
+  | { type: 'SET_LOCALE'; payload: 'en' | 'zh' }
+  | { type: 'SET_ACTIVE_DOMAIN'; payload: string | null }
+  | { type: 'SET_THINKING'; payload: boolean }
+  | { type: 'SET_SESSION'; payload: string };

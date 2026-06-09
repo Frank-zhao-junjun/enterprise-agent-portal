@@ -1,4 +1,8 @@
-# 项目上下文
+# Ontology Hub — 项目规范
+
+## 项目概览
+
+Ontology Hub 是一个前端主 Agent 系统，通过 MCP 协议调用不同领域的本体模型 Server，为用户提供智能问答服务。采用 Hub-and-Spoke 架构，Triage Agent 作为唯一入口路由到专业领域。
 
 ### 版本技术栈
 
@@ -7,59 +11,120 @@
 - **Language**: TypeScript 5
 - **UI 组件**: shadcn/ui (基于 Radix UI)
 - **Styling**: Tailwind CSS 4
+- **LLM SDK**: coze-coding-dev-sdk (LLMClient)
+- **模型**: doubao-seed-1-8-251228
 
 ## 目录结构
 
 ```
-├── public/                 # 静态资源
-├── scripts/                # 构建与启动脚本
-│   ├── build.sh            # 构建脚本
-│   ├── dev.sh              # 开发环境启动脚本
-│   ├── prepare.sh          # 预处理脚本
-│   └── start.sh            # 生产环境启动脚本
+├── public/                    # 静态资源
 ├── src/
-│   ├── app/                # 页面路由与布局
-│   ├── components/ui/      # Shadcn UI 组件库
-│   ├── hooks/              # 自定义 Hooks
-│   ├── lib/                # 工具库
-│   │   └── utils.ts        # 通用工具函数 (cn)
-│   └── server.ts           # 自定义服务端入口
-├── next.config.ts          # Next.js 配置
-├── package.json            # 项目依赖管理
-└── tsconfig.json           # TypeScript 配置
+│   ├── app/                   # Next.js App Router
+│   │   ├── api/
+│   │   │   ├── chat/route.ts  # SSE 流式聊天 API
+│   │   │   └── domains/route.ts # 领域列表 API
+│   │   ├── layout.tsx         # 根布局 (AppProvider + Header)
+│   │   ├── page.tsx           # 主页面 (ChatClient + ArchitectureInfo)
+│   │   └── globals.css        # 全局样式
+│   ├── components/
+│   │   ├── chat/ChatClient.tsx       # 聊天客户端（消息列表+输入+SSE解析）
+│   │   ├── domain-selector/DomainSelector.tsx # 领域选择器侧边栏
+│   │   ├── layout/
+│   │   │   ├── Header.tsx            # 顶部导航
+│   │   │   └── ArchitectureInfo.tsx  # 架构说明弹窗
+│   │   ├── reasoning/ReasoningChain.tsx # 推理链可视化
+│   │   └── ui/                        # shadcn/ui 组件
+│   ├── contexts/
+│   │   └── app-context.tsx    # 全局状态 (消息、领域、语言)
+│   ├── lib/
+│   │   ├── domain-registry.ts # 领域注册表 (4 个领域定义)
+│   │   ├── i18n.ts            # 国际化 (中/英)
+│   │   ├── mcp-client.ts      # MCP 客户端 (MockTransport + 工厂)
+│   │   ├── triage-agent.ts    # 主 Agent (意图分类+路由+工具调用+回复生成)
+│   │   └── utils.ts           # cn 工具函数
+│   └── types/
+│       └── ontology.ts        # 核心类型定义
+├── .coze                      # 部署配置
+├── next.config.ts
+├── package.json
+└── tsconfig.json
 ```
 
-- 项目文件（如 app 目录、pages 目录、components 等）默认初始化到 `src/` 目录下。
+## 核心架构
+
+### 数据流
+
+```
+用户输入 → ChatClient (fetch POST /api/chat) → Triage Agent
+  → Step 1: LLM 意图分类 (callLLM via coze-coding-dev-sdk)
+  → Step 2: 领域路由
+  → Step 3: MCP 工具调用 (MockTransport)
+  → Step 4: LLM 流式回复生成 (callLLMStream)
+← SSE 事件流 (reasoning/content/done/error) ← ChatClient 逐帧解析
+```
+
+### SSE 事件格式
+
+API 返回 `data: {...}\n\n` 格式的 SSE 流，事件类型：
+- `reasoning`: 推理步骤更新（status: running/completed/error）
+- `content`: 流式文本 chunk
+- `done`: 完成事件（含 response、sessionId、domainId）
+- `error`: 错误事件
+
+### 领域注册
+
+4 个领域：manufacturing / customer-service / supply-chain / general
+每个领域有 5 大能力类别：semantic / behavior / event / governance / api
 
 ## 包管理规范
 
-**仅允许使用 pnpm** 作为包管理器，**严禁使用 npm 或 yarn**。
-**常用命令**：
-- 安装依赖：`pnpm add <package>`
-- 安装开发依赖：`pnpm add -D <package>`
-- 安装所有依赖：`pnpm install`
-- 移除依赖：`pnpm remove <package>`
+**仅允许使用 pnpm**，严禁 npm 或 yarn。
 
 ## 开发规范
 
-### 编码规范
+### LLM 调用
 
-- 默认按 TypeScript `strict` 心智写代码；优先复用当前作用域已声明的变量、函数、类型和导入，禁止引用未声明标识符或拼错变量名。
-- 禁止隐式 `any` 和 `as any`；函数参数、返回值、解构项、事件对象、`catch` 错误在使用前应有明确类型或先完成类型收窄，并清理未使用的变量和导入。
+- 后端统一使用 `coze-coding-dev-sdk` 的 `LLMClient`
+- 非流式用 `client.invoke(messages, llmConfig)`
+- 流式用 `client.stream(messages, llmConfig)` (AsyncGenerator)
+- 必须通过 `HeaderUtils.extractForwardHeaders(request.headers)` 传入请求头
+- SDK 仅限后端使用，禁止在前端代码中导入
 
-### next.config 配置规范
+### 类型安全
 
-- 配置的路径不要写死绝对路径，必须使用 path.resolve(__dirname, ...)、import.meta.dirname 或 process.cwd() 动态拼接。
+- `ReasoningStep.result` 类型为 `Record<string, unknown>`，渲染到 JSX 前必须类型收窄
+- `ChatMessage.role` 支持 `'user' | 'assistant' | 'system' | 'agent'`
+- MCP 工具调用通过 `IMCPClient` 接口抽象，MockMCPClient 为模拟实现
 
-### Hydration 问题防范
+### 状态管理
 
-1. 严禁在 JSX 渲染逻辑中直接使用 typeof window、Date.now()、Math.random() 等动态数据。**必须使用 'use client' 并配合 useEffect + useState 确保动态内容仅在客户端挂载后渲染**；同时严禁非法 HTML 嵌套（如 <p> 嵌套 <div>）。
-2. **禁止使用 head 标签**，优先使用 metadata，详见文档：https://nextjs.org/docs/app/api-reference/functions/generate-metadata
-   1. 三方 CSS、字体等资源可在 `globals.css` 中顶部通过 `@import` 引入或使用 next/font
-   2. preload, preconnect, dns-prefetch 通过 ReactDOM 的 preload、preconnect、dns-prefetch 方法引入
-   3. json-ld 可阅读 https://nextjs.org/docs/app/guides/json-ld
+全局状态通过 `AppContext` (useReducer) 管理：
+- chatMessages: 消息列表
+- activeDomainId: 当前选中领域（可选，null 表示自动路由）
+- isThinking: Agent 是否正在思考
+- locale: 语言切换 (zh/en)
+- showArchitectureInfo: 架构说明弹窗
 
-## UI 设计与组件规范 (UI & Styling Standards)
+关键状态持久化到 localStorage（locale、activeDomainId）。
 
-- 模板默认预装核心组件库 `shadcn/ui`，位于`src/components/ui/`目录下
-- Next.js 项目**必须默认**采用 shadcn/ui 组件、风格和规范，**除非用户指定用其他的组件和规范。**
+### Hydration 注意事项
+
+- `formatTime` 使用 `new Date()`，仅在客户端组件中使用
+- 布局中不直接使用 `Date.now()` / `Math.random()`
+
+## 构建和测试命令
+
+- 开发: `pnpm run dev` (端口 5000，HMR)
+- 类型检查: `pnpm ts-check`
+- Lint: `pnpm lint`
+- 构建: `pnpm run build`
+- 生产启动: `pnpm run start`
+
+## API 接口
+
+1. `POST /api/chat` — 流式聊天 API (SSE)
+   - Body: `{ message: string, sessionId?: string, forcedDomainId?: string, locale?: 'zh'|'en' }`
+   - 返回: SSE 事件流
+
+2. `GET /api/domains` — 获取所有领域
+   - 返回: `{ domains: DomainOntology[] }`
