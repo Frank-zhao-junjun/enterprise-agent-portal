@@ -1,56 +1,30 @@
 import type { Metadata } from 'next';
-import { Inter, Noto_Sans_SC } from 'next/font/google';
-import { AppProvider } from '@/contexts/app-context';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const notoSansSC = Noto_Sans_SC({ subsets: ['latin'], variable: '--font-noto-sc' });
+import { AppProvider } from '@/contexts/app-context';
+import { Header } from '@/components/layout/Header';
 
 export const metadata: Metadata = {
-  title: {
-    default: 'Agent Architecture Designer',
-    template: '%s | Agent Architecture Designer',
-  },
-  description:
-    'Design Hub-and-Spoke Multi-Agent architectures with LLM-powered generation and interactive demos.',
-  keywords: [
-    'Multi-Agent',
-    'Agent Architecture',
-    'Hub-and-Spoke',
-    'LLM',
-    'AI Agent',
-    'Guardrails',
-    'Agent Designer',
-  ],
-  authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
-  generator: 'Coze Code',
-  icons: {
-    icon: '/favicon.ico',
-  },
+  title: 'Ontology Hub · Multi-Domain Agent',
+  description: 'Frontend main agent that calls different domain ontology models via MCP',
+  keywords: ['ontology', 'agent', 'MCP', 'multi-domain', 'AI', 'semantic'],
+  authors: [{ name: 'Frank Zhao', url: 'https://github.com/Frank-zhao-junjun' }],
+  icons: { icon: '/favicon.ico' },
   openGraph: {
-    title: 'Agent Architecture Designer',
-    description: 'Design Hub-and-Spoke Multi-Agent architectures',
-    url: process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000',
-    siteName: 'Agent Architecture Designer',
-    locale: 'en_US',
+    title: 'Ontology Hub',
+    description: 'Frontend main agent calling domain ontologies via MCP',
     type: 'website',
-  },
-  robots: {
-    index: true,
-    follow: true,
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${notoSansSC.variable}`}>
-      <body className={`antialiased font-sans`}>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body className="antialiased">
         <AppProvider>
-          {children}
+          <div className="flex h-screen flex-col bg-background text-foreground">
+            <Header />
+            <div className="flex-1 overflow-hidden">{children}</div>
+          </div>
         </AppProvider>
       </body>
     </html>

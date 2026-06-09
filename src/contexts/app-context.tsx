@@ -1,285 +1,126 @@
 'use client';
 
+/**
+ * 全局状态管理 - Ontology Hub
+ * 管理：聊天消息、当前选中领域、是否正在思考、语言
+ */
+
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-import { AppState, UIAction, AgentRecord, AgentVersion, DemoVersion, Locale } from '@/types/architecture';
-import { loadAgents, saveAgents, generateId, getNextVersion, getNextDemoVersion } from '@/lib/data-service';
+import type { ChatMessage } from '@/types/ontology';
+
+export type Locale = 'zh' | 'en';
+
+/** 应用状态 */
+export interface AppState {
+  chatMessages: ChatMessage[];
+  activeDomainId: string | undefined;
+  isThinking: boolean;
+  locale: Locale;
+  showArchitectureInfo: boolean;
+}
+
+/** Action 类型 */
+export type UIAction =
+  | { type: 'ADD_CHAT_MESSAGE'; message: ChatMessage }
+  | { type: 'UPDATE_CHAT_MESSAGE'; messageId: string; updates: Partial<ChatMessage> }
+  | { type: 'CLEAR_CHAT' }
+  | { type: 'SET_ACTIVE_DOMAIN'; domainId: string | undefined }
+  | { type: 'SET_THINKING'; isThinking: boolean }
+  | { type: 'SET_LOCALE'; locale: Locale }
+  | { type: 'TOGGLE_ARCHITECTURE_INFO' }
+  | { type: 'LOAD_STATE'; state: Partial<AppState> };
 
 const initialState: AppState = {
-  agents: [],
-  selectedAgentId: null,
-  selectedVersionId: null,
-  selectedDemoId: null,
-  activeTab: 0,
-  locale: 'en',
-  demoPlaying: false,
-  demoCurrentStep: 0,
-  demoAutoPlay: false,
+  chatMessages: [],
+  activeDomainId: undefined,
+  isThinking: false,
+  locale: 'zh',
+  showArchitectureInfo: false,
 };
 
 function appReducer(state: AppState, action: UIAction): AppState {
   switch (action.type) {
-    case 'SET_AGENTS':
-      return { ...state, agents: action.payload };
+    case 'ADD_CHAT_MESSAGE':
+      return { ...state, chatMessages: [...state.chatMessages, action.message] };
 
-    case 'ADD_AGENT': {
-      const agents = [...state.agents, action.payload];
+    case 'UPDATE_CHAT_MESSAGE':
       return {
         ...state,
-        agents,
-        selectedAgentId: action.payload.id,
-        selectedVersionId: null,
-        selectedDemoId: null,
+        chatMessages: state.chatMessages.map((m) =>
+          m.id === action.messageId ? { ...m, ...action.updates } : m,
+        ),
       };
-    }
 
-    case 'UPDATE_AGENT': {
-      const agents = state.agents.map(a =>
-        a.id === action.payload.agentId ? { ...a, ...action.payload.updates, updatedAt: Date.now() } : a
-      );
-      return { ...state, agents };
-    }
+    case 'CLEAR_CHAT':
+      return { ...state, chatMessages: [] };
 
-    case 'DELETE_AGENT': {
-      const agents = state.agents.filter(a => a.id !== action.payload);
-      const selectedAgentId = state.selectedAgentId === action.payload
-        ? (agents[0]?.id ?? null)
-        : state.selectedAgentId;
-      return {
-        ...state,
-        agents,
-        selectedAgentId,
-        selectedVersionId: null,
-        selectedDemoId: null,
-      };
-    }
+    case 'SET_ACTIVE_DOMAIN':
+      return { ...state, activeDomainId: action.domainId };
 
-    case 'SELECT_AGENT': {
-      const agent = state.agents.find(a => a.id === action.payload);
-      const latestVersion = agent?.versions[agent.versions.length - 1];
-      const selectedVersionId = latestVersion?.id ?? null;
-      const selectedDemoId = latestVersion?.demos.length
-        ? latestVersion.demos[latestVersion.demos.length - 1]?.id ?? null
-        : null;
-      return {
-        ...state,
-        selectedAgentId: action.payload,
-        selectedVersionId,
-        selectedDemoId,
-        activeTab: 0,
-      };
-    }
-
-    case 'ADD_VERSION': {
-      const agents = state.agents.map(a =>
-        a.id === action.payload.agentId
-          ? { ...a, versions: [...a.versions, action.payload.version], updatedAt: Date.now() }
-          : a
-      );
-      return {
-        ...state,
-        agents,
-        selectedVersionId: action.payload.version.id,
-        selectedDemoId: null,
-      };
-    }
-
-    case 'UPDATE_VERSION': {
-      const agents = state.agents.map(a =>
-        a.id === action.payload.agentId
-          ? {
-              ...a,
-              versions: a.versions.map(v =>
-                v.id === action.payload.versionId ? { ...v, ...action.payload.updates } : v
-              ),
-              updatedAt: Date.now(),
-            }
-          : a
-      );
-      return { ...state, agents };
-    }
-
-    case 'SELECT_VERSION': {
-      const agent = state.agents.find(a => a.id === action.payload.agentId);
-      const version = agent?.versions.find(v => v.id === action.payload.versionId);
-      const selectedDemoId = version?.demos[version.demos.length - 1]?.id ?? null;
-      return {
-        ...state,
-        selectedVersionId: action.payload.versionId,
-        selectedDemoId,
-      };
-    }
-
-    case 'ADD_DEMO': {
-      const agents = state.agents.map(a =>
-        a.id === action.payload.agentId
-          ? {
-              ...a,
-              versions: a.versions.map(v =>
-                v.id === action.payload.versionId
-                  ? { ...v, demos: [...v.demos, action.payload.demo] }
-                  : v
-              ),
-              updatedAt: Date.now(),
-            }
-          : a
-      );
-      return {
-        ...state,
-        agents,
-        selectedDemoId: action.payload.demo.id,
-        activeTab: 1,
-      };
-    }
-
-    case 'SELECT_DEMO':
-      return { ...state, selectedDemoId: action.payload.demoId };
-
-    case 'SET_ACTIVE_TAB':
-      return { ...state, activeTab: action.payload };
+    case 'SET_THINKING':
+      return { ...state, isThinking: action.isThinking };
 
     case 'SET_LOCALE':
-      return { ...state, locale: action.payload };
+      return { ...state, locale: action.locale };
 
-    case 'TOGGLE_LOCALE':
-      return { ...state, locale: state.locale === 'zh' ? 'en' : 'zh' };
+    case 'TOGGLE_ARCHITECTURE_INFO':
+      return { ...state, showArchitectureInfo: !state.showArchitectureInfo };
 
-    case 'SET_DEMO_PLAYING':
-      return { ...state, demoPlaying: action.payload };
-
-    case 'SET_DEMO_STEP':
-      return { ...state, demoCurrentStep: action.payload };
-
-    case 'SET_DEMO_AUTO_PLAY':
-      return { ...state, demoAutoPlay: action.payload };
-
-    case 'RESET_DEMO':
-      return { ...state, demoCurrentStep: 0, demoPlaying: false, demoAutoPlay: false };
+    case 'LOAD_STATE':
+      return { ...state, ...action.state };
 
     default:
       return state;
   }
 }
 
-// Helper functions exposed via context
+const STORAGE_KEY = 'ontology-hub-state';
+
 interface AppContextValue {
   state: AppState;
   dispatch: React.Dispatch<UIAction>;
-  // Convenience helpers
-  selectedAgent: AgentRecord | null;
-  selectedVersion: AgentVersion | null;
-  selectedDemo: DemoVersion | null;
-  createAgent: (name: string) => void;
-  addVersion: (agentId: string, description: AgentVersion['description']) => void;
-  addDemo: (agentId: string, versionId: string, architecture: DemoVersion['architecture'], scenarios: DemoVersion['scenarios']) => void;
 }
 
-const AppContext = createContext<AppContextValue | null>(null);
+const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Load from localStorage on mount
+  // 加载持久化状态
   useEffect(() => {
-    const stored = loadAgents();
-    if (stored.length > 0) {
-      dispatch({ type: 'SET_AGENTS', payload: stored });
-      dispatch({ type: 'SELECT_AGENT', payload: stored[0].id });
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<AppState>;
+        dispatch({ type: 'LOAD_STATE', state: parsed });
+      }
+    } catch (e) {
+      console.error('Failed to load state from localStorage', e);
     }
   }, []);
 
-  // Persist to localStorage on change
+  // 持久化状态
   useEffect(() => {
-    saveAgents(state.agents);
-  }, [state.agents]);
+    try {
+      // 只持久化关键字段，不保存消息历史
+      const toSave = {
+        locale: state.locale,
+        activeDomainId: state.activeDomainId,
+        showArchitectureInfo: state.showArchitectureInfo,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.error('Failed to save state to localStorage', e);
+    }
+  }, [state.locale, state.activeDomainId, state.showArchitectureInfo]);
 
-  // Derive convenience values
-  const selectedAgent = state.agents.find(a => a.id === state.selectedAgentId) ?? null;
-  const selectedVersion = selectedAgent?.versions.find(v => v.id === state.selectedVersionId) ?? null;
-  const selectedDemo = selectedVersion?.demos.find(d => d.id === state.selectedDemoId) ?? null;
-
-  // Helper: Create new agent with initial version
-  function createAgent(name: string) {
-    const agentId = generateId();
-    const versionId = generateId();
-    const version: AgentVersion = {
-      id: versionId,
-      version: 'v1.0',
-      createdAt: Date.now(),
-      description: {
-        intro: '',
-        applicable_scenarios: '',
-        capabilities: '',
-        system_connections: '',
-        business_impact: '',
-        category: '',
-      },
-      demos: [],
-    };
-    const agent: AgentRecord = {
-      id: agentId,
-      name,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      versions: [version],
-    };
-    dispatch({ type: 'ADD_AGENT', payload: agent });
-  }
-
-  // Helper: Add new version to agent
-  function addVersion(agentId: string, description: AgentVersion['description']) {
-    const agent = state.agents.find(a => a.id === agentId);
-    if (!agent) return;
-    const nextVersion = getNextVersion(agent.versions);
-    const version: AgentVersion = {
-      id: generateId(),
-      version: nextVersion,
-      createdAt: Date.now(),
-      description,
-      demos: [],
-    };
-    dispatch({ type: 'ADD_VERSION', payload: { agentId, version } });
-  }
-
-  // Helper: Add demo to version
-  function addDemo(
-    agentId: string,
-    versionId: string,
-    architecture: DemoVersion['architecture'],
-    scenarios: DemoVersion['scenarios']
-  ) {
-    const version = state.agents.find(a => a.id === agentId)?.versions.find(v => v.id === versionId);
-    if (!version) return;
-    const nextDemoVersion = getNextDemoVersion(version.demos);
-    const demo: DemoVersion = {
-      id: generateId(),
-      version: nextDemoVersion,
-      createdAt: Date.now(),
-      architecture,
-      scenarios,
-    };
-    dispatch({ type: 'ADD_DEMO', payload: { agentId, versionId, demo } });
-  }
-
-  return (
-    <AppContext.Provider
-      value={{
-        state,
-        dispatch,
-        selectedAgent,
-        selectedVersion,
-        selectedDemo,
-        createAgent,
-        addVersion,
-        addDemo,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }
 
 export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  if (!ctx) {
+    throw new Error('useApp must be used within AppProvider');
+  }
   return ctx;
 }
