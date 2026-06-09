@@ -8,3 +8,6 @@ __pycache__/
 *.pyc
 data/*.db
 data/*.db-*
+
+# Preview files
+.preview
