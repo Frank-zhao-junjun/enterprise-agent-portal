@@ -9,10 +9,59 @@ export type Locale = 'zh' | 'en';
 
 export const dictionaries: Record<string, Record<Locale, string>> = {
   // 顶部
-  app_title: { zh: '企业 Agent 平台', en: 'Enterprise Agent Portal' },
+  app_title: { zh: '本体模型平台', en: 'Ontology Platform' },
   app_subtitle: {
-    zh: '统一入口：主 Agent 通过 MCP 调用不同领域本体模型',
-    en: 'Unified entry: main agent calling domain ontologies via MCP',
+    zh: 'MCP Server 与领域本体模型管理',
+    en: 'MCP Server & Domain Ontology Management',
+  },
+
+  // 侧边栏导航
+  nav_platform: { zh: '平台', en: 'Platform' },
+  nav_testing: { zh: '测试', en: 'Testing' },
+  nav_dashboard: { zh: '仪表盘', en: 'Dashboard' },
+  nav_ontology: { zh: '本体模型', en: 'Ontology Models' },
+  nav_mcp_servers: { zh: 'MCP Server', en: 'MCP Servers' },
+  nav_showcase: { zh: 'Agent Showcase', en: 'Agent Showcase' },
+  expand: { zh: '展开', en: 'Expand' },
+  collapse: { zh: '收起', en: 'Collapse' },
+
+  // 仪表盘
+  dashboard_title: { zh: '平台概览', en: 'Platform Overview' },
+  dashboard_subtitle: {
+    zh: 'MCP Server 与领域本体模型运行状态',
+    en: 'MCP Server & Domain Ontology runtime status',
+  },
+  stat_mcp_servers: { zh: 'MCP 服务器', en: 'MCP Servers' },
+  stat_online: { zh: '在线', en: 'online' },
+  stat_ontology_domains: { zh: '本体领域', en: 'Ontology Domains' },
+  stat_domains_desc: { zh: '个领域已注册', en: 'domains registered' },
+  stat_total_tools: { zh: '工具总数', en: 'Total Tools' },
+  stat_tools_desc: { zh: '个 MCP 工具可用', en: 'MCP tools available' },
+  stat_categories: { zh: '能力类别', en: 'Capability Categories' },
+  stat_categories_desc: { zh: '大能力类别', en: 'major capability types' },
+  mcp_server_status: { zh: 'MCP Server 状态', en: 'MCP Server Status' },
+  ontology_capabilities: { zh: '本体模型能力', en: 'Ontology Capabilities' },
+  view_all: { zh: '查看全部', en: 'View All' },
+  view_details: { zh: '查看详情', en: 'Details' },
+  quick_start: { zh: '快速开始', en: 'Quick Start' },
+  browse_ontology: { zh: '浏览本体模型', en: 'Browse Ontology' },
+  manage_servers: { zh: '管理 MCP Server', en: 'Manage MCP Servers' },
+  agent_showcase: { zh: 'Agent Showcase 测试', en: 'Agent Showcase Test' },
+
+  // 本体模型页
+  ontology_title: { zh: '本体模型', en: 'Ontology Models' },
+  ontology_subtitle: {
+    zh: '浏览各领域本体模型的语义、行为、事件、治理和 API 能力',
+    en: 'Browse semantic, behavior, event, governance & API capabilities across domains',
+  },
+  all_domains: { zh: '全部领域', en: 'All Domains' },
+  categories_count: { zh: '个类别', en: 'categories' },
+
+  // MCP Server 页
+  mcp_servers_title: { zh: 'MCP Server 管理', en: 'MCP Server Management' },
+  mcp_servers_subtitle: {
+    zh: '查看服务器状态，交互式测试 MCP 工具',
+    en: 'View server status, interactively test MCP tools',
   },
 
   // 侧边栏 - 领域列表

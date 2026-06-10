@@ -17,6 +17,7 @@ export interface AppState {
   isThinking: boolean;
   locale: Locale;
   showArchitectureInfo: boolean;
+  sidebarCollapsed: boolean;
 }
 
 /** Action 类型 */
@@ -28,6 +29,7 @@ export type UIAction =
   | { type: 'SET_THINKING'; isThinking: boolean }
   | { type: 'SET_LOCALE'; locale: Locale }
   | { type: 'TOGGLE_ARCHITECTURE_INFO' }
+  | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'LOAD_STATE'; state: Partial<AppState> };
 
 const initialState: AppState = {
@@ -36,6 +38,7 @@ const initialState: AppState = {
   isThinking: false,
   locale: 'zh',
   showArchitectureInfo: false,
+  sidebarCollapsed: false,
 };
 
 function appReducer(state: AppState, action: UIAction): AppState {
@@ -65,6 +68,9 @@ function appReducer(state: AppState, action: UIAction): AppState {
 
     case 'TOGGLE_ARCHITECTURE_INFO':
       return { ...state, showArchitectureInfo: !state.showArchitectureInfo };
+
+    case 'TOGGLE_SIDEBAR':
+      return { ...state, sidebarCollapsed: !state.sidebarCollapsed };
 
     case 'LOAD_STATE':
       return { ...state, ...action.state };
