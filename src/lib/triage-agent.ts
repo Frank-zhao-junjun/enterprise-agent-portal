@@ -7,7 +7,7 @@
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import type { DomainRouteResult, LLMMessage, ReasoningStep, MCPToolResult } from '@/types/ontology';
 import { getDomainById, getAllDomains } from './domain-registry';
-import { createHTTPMCPClient, createMockMCPClient } from './mcp-client';
+import { createLocalMCPClient, createMockMCPClient } from './mcp-client';
 
 // ============================================================
 // LLM 调用封装 (coze-coding-dev-sdk)
@@ -85,8 +85,8 @@ Rules:
 1. Choose the domain that best matches the user's intent
 2. If unsure, use "general" domain
 3. Select tools that are relevant to answer the user's question
-4. Always include "ontology_intent_parse" as the first tool
-5. Respond ONLY with valid JSON, no other text`,
+4. Always include the intent parse tool as the first tool for the selected domain
+5. Respond ONLY with valid JSON, no other text`
     },
     {
       role: 'user',
@@ -143,13 +143,13 @@ Reasoning: ${route.reasoning}`,
 async function getMCPClientForDomain(domainId: string) {
   const domain = getDomainById(domainId);
 
-  // 尝试使用 HTTP Transport 连接真实 MCP Server
+  // 优先使用本地 MCP Server 直接调用（快，无 HTTP 自引用）
   if (domain && domainId !== 'general') {
     try {
-      const client = await createHTTPMCPClient(domainId);
+      const client = await createLocalMCPClient(domainId);
       return client;
     } catch (err) {
-      console.warn(`[Triage] HTTP MCP failed for ${domainId}, falling back to mock:`, err);
+      console.warn(`[Triage] Local MCP failed for ${domainId}, falling back to mock:`, err);
     }
   }
 
@@ -348,66 +348,50 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
 }
 
 // ============================================================
-// 工具参数构建
+// 工具参数构建（动态匹配）
 // ============================================================
 
+/**
+ * 根据工具的 parameter schema 动态构建默认参数
+ * 不再依赖硬编码的 toolName 模式匹配
+ */
 function buildToolArgs(
   toolName: string,
   userMessage: string,
   route: DomainRouteResult,
 ): Record<string, unknown> {
-  // 语义类工具：传入 query
-  if (toolName.includes('intent_parse')) {
+  const domain = getDomainById(route.domainId);
+  const toolDef = domain?.tools.find((t) => t.name === toolName);
+
+  // 有完整的 parameter schema，动态构建默认值
+  if (toolDef?.parameters && Object.keys(toolDef.parameters).length > 0) {
+    const args: Record<string, unknown> = {};
+    for (const [name, param] of Object.entries(toolDef.parameters)) {
+      if (param.required) {
+        if (param.enum && param.enum.length > 0) {
+          args[name] = param.enum[0];
+        } else if (param.type === 'string') {
+          // 字符串类型且含 query/keyword → 传入用户消息
+          if (param.description.toLowerCase().includes('query') || name.includes('query') || name.includes('keyword')) {
+            args[name] = userMessage;
+          } else {
+            args[name] = '';
+          }
+        } else if (param.type === 'number') {
+          args[name] = 10;
+        } else {
+          args[name] = null;
+        }
+      }
+    }
+    return args;
+  }
+
+  // 无 schema 时 fallback：根据 toolName 推断（向后兼容）
+  if (toolName.includes('intent_parse') || toolName.includes('query') || toolName.includes('search')) {
     return { query: userMessage };
   }
 
-  // 行为类工具：根据领域推断 task_type
-  if (toolName.includes('plan_execute')) {
-    const taskTypeMap: Record<string, string> = {
-      manufacturing: 'production_schedule',
-      'customer-service': 'create_ticket',
-      'supply-chain': 'inventory_check',
-    };
-    return { task_type: taskTypeMap[route.domainId] ?? 'general' };
-  }
-
-  // 事件类工具
-  if (toolName.includes('event_log')) {
-    return { event_type: 'all', limit: 10 };
-  }
-
-  // 治理类工具
-  if (toolName.includes('governance_check')) {
-    const checkTypeMap: Record<string, string> = {
-      manufacturing: 'compliance',
-      'customer-service': 'sla',
-      'supply-chain': 'supplier_compliance',
-    };
-    return { check_type: checkTypeMap[route.domainId] ?? 'compliance' };
-  }
-
-  // API 连接类工具
-  if (toolName.includes('api_connect')) {
-    const systemMap: Record<string, string> = {
-      manufacturing: 'mes',
-      'customer-service': 'crm',
-      'supply-chain': 'erp',
-    };
-    return { system: systemMap[route.domainId] ?? 'erp', action: 'status' };
-  }
-
-  // 供应链特有工具
-  if (toolName.includes('supply_chain_event_log')) {
-    return { event_type: 'all', limit: 10 };
-  }
-  if (toolName.includes('supply_chain_governance_check')) {
-    return { check_type: 'supplier_compliance' };
-  }
-  if (toolName.includes('supply_chain_api_connect')) {
-    return { system: 'erp', action: 'status' };
-  }
-
-  // 通用 fallback
   return { query: userMessage };
 }
 

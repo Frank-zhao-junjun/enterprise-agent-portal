@@ -105,8 +105,6 @@ export function DomainSelector() {
 
 /** 工具列表 */
 function ToolList({ domain }: { domain: DomainOntology }) {
-  const { state } = useApp();
-  const locale = state.locale;
   return (
     <div className="px-3 pb-3 space-y-1.5 border-t border-border/30 pt-2">
       {domain.tools.map((tool) => (

@@ -6,7 +6,6 @@
 import {
   JSONRPCRequest,
   JSONRPCResponse,
-  JSONRPCError,
   MCPToolDefinition,
   MCPToolCallParams,
   MCPToolResult,

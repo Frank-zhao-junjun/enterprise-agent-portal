@@ -9,7 +9,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useApp } from '@/contexts/app-context';
 import { t } from '@/lib/i18n';
 import { getAllDomains } from '@/lib/domain-registry';
-import type { DomainOntology, MCPTool, MCPToolParameter } from '@/types/ontology';
+import type { DomainOntology, MCPToolParameter } from '@/types/ontology';
 import {
   Server,
   Play,
@@ -20,7 +20,6 @@ import {
   Truck,
   HeadphonesIcon,
   Boxes,
-  Send,
   Copy,
   Check,
   RotateCcw,

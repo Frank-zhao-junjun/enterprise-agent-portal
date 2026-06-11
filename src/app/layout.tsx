@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppProvider } from '@/contexts/app-context';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 export const metadata: Metadata = {
   title: '本体模型平台 · Ontology Platform',
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProvider>
           <div className="flex h-screen bg-background text-foreground">
             <Sidebar />
-            <main className="flex-1 overflow-hidden">{children}</main>
+            <main className="flex-1 overflow-hidden">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
           </div>
         </AppProvider>
       </body>

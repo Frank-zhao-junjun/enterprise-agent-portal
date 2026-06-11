@@ -11,7 +11,6 @@ import { manufacturingData } from './data';
 
 async function ontologyIntentParse(args: Record<string, unknown>): Promise<MCPToolResult> {
   const query = String(args.query || '');
-  const lowerQuery = query.toLowerCase();
 
   // 语义解析：识别实体和意图
   const entities: string[] = [];

@@ -96,13 +96,30 @@ function buildCategories(tools: MCPToolDefinition[]): DomainOntology['categories
   }));
 }
 
-// ============ 动态领域构建 ============
+// ============ 动态领域构建（带可刷新缓存）============
+
+let cachedDomains: DomainOntology[] | null = null;
+let cacheBuildCount = 0;
 
 /**
- * 获取所有领域（从 MCP Server 注册表动态获取工具）
+ * 获取所有领域（从 MCP Server 注册表动态获取工具，带缓存）
  */
 export function getAllDomains(): DomainOntology[] {
-  return DOMAIN_METAS.map((meta) => {
+  if (cachedDomains) return cachedDomains;
+  return rebuildCache();
+}
+
+/**
+ * 强制刷新缓存（热加载新注册的 Server）
+ * 当 MCP Server 注册表变化后调用此函数使数据生效
+ */
+export function invalidateDomainCache(): DomainOntology[] {
+  cachedDomains = null;
+  return rebuildCache();
+}
+
+function rebuildCache(): DomainOntology[] {
+  cachedDomains = DOMAIN_METAS.map((meta) => {
     const server = getMCPServer(meta.id);
     const toolDefs = server ? server.getToolDefinitions() : [];
 
@@ -120,13 +137,20 @@ export function getAllDomains(): DomainOntology[] {
       exampleQuestionsEn: meta.exampleQuestionsEn,
     };
   });
+  cacheBuildCount++;
+  return cachedDomains;
+}
+
+/** 获取缓存构建次数（用于依赖追踪/调试） */
+export function getCacheBuildCount(): number {
+  return cacheBuildCount;
 }
 
 /**
  * 按ID获取领域
  */
 export function getDomainById(id: string): DomainOntology | undefined {
-  return getAllDomains().find((d) => d.id === id);
+  return ALL_DOMAINS.find((d) => d.id === id);
 }
 
 export const ALL_DOMAINS = getAllDomains();

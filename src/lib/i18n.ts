@@ -3,7 +3,7 @@
  * 支持中文/英文双语切换
  */
 
-import type { ChatMessage, ReasoningStepType } from '@/types/ontology';
+import type { ReasoningStepType } from '@/types/ontology';
 
 export type Locale = 'zh' | 'en';
 

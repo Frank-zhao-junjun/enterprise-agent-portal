@@ -91,9 +91,10 @@ async function ontologyPlanExecute(args: Record<string, unknown>): Promise<MCPTo
 
     case 'auto_respond': {
       const question = String(args.question || '');
-      const faqMatch = customerServiceData.faqs.find(
-        (f) => question.includes(f.keywords.split(',').find((k) => question.includes(k)) || '')
-      );
+      const faqMatch = customerServiceData.faqs.find((f) => {
+        const keywords = f.keywords.split(',').map((k) => k.trim());
+        return keywords.some((k) => k.length > 0 && question.includes(k));
+      });
       result.autoResponse = faqMatch
         ? { found: true, answer: faqMatch.answer, confidence: 0.92, source: 'FAQ' }
         : { found: false, suggestion: '转人工客服处理', reason: '未匹配到标准FAQ' };

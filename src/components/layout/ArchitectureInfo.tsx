@@ -95,7 +95,7 @@ export function ArchitectureInfo() {
             {/* 后端系统层 */}
             <ArchNode
               icon={<Database className="size-4" />}
-              title={locale === 'zh' ? '后端系统 (MES / ERP / GDS / WMS)' : 'Backend Systems (MES/ERP/GDS/WMS)'}
+              title={locale === 'zh' ? '后端系统 (MES / SCADA / CRM / ERP / WMS / TMS)' : 'Backend Systems (MES/SCADA/CRM/ERP/WMS/TMS)'}
               color="bg-muted"
             />
           </div>
