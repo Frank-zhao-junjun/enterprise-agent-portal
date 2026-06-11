@@ -10,6 +10,12 @@ import { getDomainById, getAllDomains } from './domain-registry';
 import { createLocalMCPClient, createMockMCPClient } from './mcp-client';
 
 // ============================================================
+// 常量
+// ============================================================
+
+const DEFAULT_LLM_MODEL = 'doubao-seed-1-8-251228';
+
+// ============================================================
 // LLM 调用封装 (coze-coding-dev-sdk)
 // ============================================================
 
@@ -27,7 +33,7 @@ async function callLLM(
 ): Promise<string> {
   const client = createLLMClient(options?.requestHeaders);
   const response = await client.invoke(messages, {
-    model: options?.model ?? 'doubao-seed-1-8-251228',
+    model: options?.model ?? DEFAULT_LLM_MODEL,
     temperature: options?.temperature ?? 0.7,
   });
   return response.content;

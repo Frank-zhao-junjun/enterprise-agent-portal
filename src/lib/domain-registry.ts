@@ -120,8 +120,13 @@ export function invalidateDomainCache(): DomainOntology[] {
 
 function rebuildCache(): DomainOntology[] {
   cachedDomains = DOMAIN_METAS.map((meta) => {
-    const server = getMCPServer(meta.id);
-    const toolDefs = server ? server.getToolDefinitions() : [];
+    let toolDefs: MCPToolDefinition[] = [];
+    try {
+      const server = getMCPServer(meta.id);
+      toolDefs = server ? server.getToolDefinitions() : [];
+    } catch (err) {
+      console.warn(`[domain-registry] Failed to get tools for domain "${meta.id}":`, err);
+    }
 
     return {
       id: meta.id,
