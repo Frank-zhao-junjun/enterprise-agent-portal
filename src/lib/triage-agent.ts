@@ -275,7 +275,17 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
   if (route.domainId !== 'general') {
     const mcpClient = await getMCPClientForDomain(route.domainId);
 
-    for (const toolName of route.toolsToCall) {
+    // 获取可用工具列表，过滤掉 LLM 幻觉的工具名
+    const availableTools = mcpClient.listTools();
+    const availableToolNames = new Set(availableTools.map((t: { name: string }) => t.name));
+    const validToolNames = route.toolsToCall.filter(name => availableToolNames.has(name));
+    const skippedTools = route.toolsToCall.filter(name => !availableToolNames.has(name));
+
+    if (skippedTools.length > 0) {
+      console.warn(`[Triage] Skipped unknown tools: ${skippedTools.join(', ')}`);
+    }
+
+    for (const toolName of validToolNames) {
       const toolStartTime = Date.now();
       const toolStep: ReasoningStep = {
         id: `step-tool-${toolStartTime}`,

@@ -75,6 +75,7 @@ export class MCPServer {
       return { jsonrpc: '2.0', id, result };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[MCP Server ${this.serverInfo.name}] Error handling ${method}:`, message);
       return this.errorResponse(id, MCP_ERROR_CODES.INTERNAL_ERROR, message);
     }
   }

@@ -46,7 +46,7 @@ export const supplyChainData = {
   events: [
     { id: 'SE001', type: 'shipment_delay', severity: 'high', message: 'SHP-002 延迟6小时: 上海→北京 (京东物流)', time: '2025-06-26T12:00:00Z' },
     { id: 'SE002', type: 'shipment_delay', severity: 'medium', message: 'SHP-004 延迟12小时: 北京→深圳 (德邦物流)', time: '2025-06-26T10:30:00Z' },
-    { id: 'SE003', type: 'inventory_alert', severity: 'critical', message: 'IC芯片库存低于安全库存 (3200/2000)', time: '2025-06-26T09:00:00Z' },
+    { id: 'SE003', type: 'inventory_alert', severity: 'critical', message: 'IC芯片库存低于补货点 (3200/5000)，安全库存 2000', time: '2025-06-26T09:00:00Z' },
     { id: 'SE004', type: 'inventory_alert', severity: 'high', message: '连接器库存低于补货点 (1800/2000)', time: '2025-06-26T08:30:00Z' },
     { id: 'SE005', type: 'supplier_change', severity: 'medium', message: '鑫源包装合规状态变更为"待审查"', time: '2025-06-25T16:00:00Z' },
     { id: 'SE006', type: 'shipment_delay', severity: 'low', message: 'SHP-001 预计按时到达: 深圳→上海', time: '2025-06-25T14:00:00Z' },

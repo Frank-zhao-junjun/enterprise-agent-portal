@@ -276,7 +276,7 @@ export function createSupplyChainServer(): MCPServer {
     },
     {
       definition: {
-        name: 'supply_chain_event_log',
+        name: 'ontology_event_log',
         description: '查询供应链事件流（物流延迟、库存告警、供应商变更）',
         category: 'event',
         parameters: {
@@ -293,7 +293,7 @@ export function createSupplyChainServer(): MCPServer {
     },
     {
       definition: {
-        name: 'supply_chain_governance_check',
+        name: 'ontology_governance_check',
         description: '供应链合规治理（供应商合规、贸易法规、可持续性）',
         category: 'governance',
         parameters: {
@@ -309,7 +309,7 @@ export function createSupplyChainServer(): MCPServer {
     },
     {
       definition: {
-        name: 'supply_chain_api_connect',
+        name: 'ontology_api_connect',
         description: '连接后端供应链系统（ERP/WMS/TMS）',
         category: 'api',
         parameters: {

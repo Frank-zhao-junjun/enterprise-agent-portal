@@ -42,6 +42,9 @@ export class HTTPTransport {
    */
   async initialize(): Promise<{ name: string; version: string }> {
     const res = await this.sendRequest('initialize');
+    if (res.error) {
+      throw new Error(`MCP initialize failed: ${res.error.message}`);
+    }
     const result = res.result as { serverInfo: { name: string; version: string } };
     return result.serverInfo;
   }
@@ -51,6 +54,9 @@ export class HTTPTransport {
    */
   async listTools(): Promise<MCPToolDefinition[]> {
     const res = await this.sendRequest('tools/list');
+    if (res.error) {
+      throw new Error(`MCP tools/list failed: ${res.error.message}`);
+    }
     const result = res.result as { tools: MCPToolDefinition[] };
     return result.tools;
   }
