@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useApp } from '@/contexts/app-context';
-import { ALL_DOMAINS } from '@/lib/domain-registry';
+import { getAllDomains } from '@/lib/domain-registry';
 import { t, getToolCategoryName, getCategoryColor } from '@/lib/i18n';
 import { Server, Wrench, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import type { DomainOntology, MCPTool } from '@/types/ontology';
@@ -30,7 +30,7 @@ export function DomainSelector() {
 
       {/* 领域列表 */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {ALL_DOMAINS.map((domain) => {
+        {getAllDomains().map((domain) => {
           const isActive = activeDomainId === domain.id;
           const isExpanded = expandedDomainId === domain.id;
           const name = locale === 'zh' ? domain.name : domain.nameEn;

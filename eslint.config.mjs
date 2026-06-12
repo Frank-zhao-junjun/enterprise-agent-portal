@@ -24,6 +24,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
+      'react-hooks/exhaustive-deps': 'error',
       'react-hooks/set-state-in-effect': 'off',
       'no-restricted-syntax': ['error', ...syntaxRules],
     },

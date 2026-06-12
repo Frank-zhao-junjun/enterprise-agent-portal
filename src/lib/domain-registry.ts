@@ -152,13 +152,18 @@ export function getCacheBuildCount(): number {
 }
 
 /**
- * 按ID获取领域
+ * 按ID获取领域（使用 getAllDomains() 确保拿到最新缓存）
  */
 export function getDomainById(id: string): DomainOntology | undefined {
-  return ALL_DOMAINS.find((d) => d.id === id);
+  return getAllDomains().find((d) => d.id === id);
 }
 
-export const ALL_DOMAINS = getAllDomains();
+/**
+ * 模块加载时的快照 — 用于静态 context。
+ * 推荐优先使用 getAllDomains() 获取最新缓存。
+ * @deprecated 请改用 getAllDomains() 以确保缓存一致性
+ */
+export const ALL_DOMAINS = /* @deprecated */ getAllDomains();
 
 export function getToolByName(domainId: string, toolName: string) {
   const domain = getDomainById(domainId);

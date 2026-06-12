@@ -24,9 +24,10 @@ interface SessionData {
 
 const sessions = new Map<string, SessionData>();
 
-// 定期清理过期会话
-if (typeof globalThis !== 'undefined' && !('__sess_cleanup' in globalThis)) {
-  (globalThis as Record<string, unknown>).__sess_cleanup = setInterval(() => {
+// 定期清理过期会话（用 Symbol 避免全局命名冲突）
+const SESSION_CLEANUP_KEY = Symbol.for('hermes-session-cleanup');
+if (typeof globalThis !== 'undefined' && !(globalThis as Record<symbol, unknown>)[SESSION_CLEANUP_KEY]) {
+  (globalThis as Record<symbol, unknown>)[SESSION_CLEANUP_KEY] = setInterval(() => {
     const now = Date.now();
     for (const [id, s] of sessions) {
       if (now - s.lastAccess > SESSION_TTL_MS) sessions.delete(id);

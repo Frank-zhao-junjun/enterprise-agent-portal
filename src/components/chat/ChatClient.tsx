@@ -8,7 +8,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/app-context';
 import { t, formatTime } from '@/lib/i18n';
-import { ALL_DOMAINS, getDomainById } from '@/lib/domain-registry';
+import { getAllDomains, getDomainById } from '@/lib/domain-registry';
 import type { ChatMessage, ReasoningStep, DomainOntology } from '@/types/ontology';
 import { DomainSelector } from '@/components/domain-selector/DomainSelector';
 import { ReasoningChain } from '@/components/reasoning/ReasoningChain';
@@ -320,7 +320,7 @@ function EmptyState({ onSelectExample }: { onSelectExample: (q: string) => void 
       </div>
 
       <div className="space-y-4">
-        {ALL_DOMAINS.map((domain) => (
+        {getAllDomains().map((domain) => (
           <DomainExampleCard
             key={domain.id}
             domain={domain}
