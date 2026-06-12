@@ -50,6 +50,7 @@ export interface MCPToolResult {
   content: string;
   isError?: boolean;
   metadata?: Record<string, unknown>;
+  duration?: number;
 }
 
 export interface MCPServerInfo {

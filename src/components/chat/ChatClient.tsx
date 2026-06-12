@@ -42,7 +42,7 @@ export function ChatClient() {
 
       // 添加用户消息
       const userMessage: ChatMessage = {
-        id: `user-${Date.now()}`,
+        id: `user-${crypto.randomUUID()}`,
         role: 'user',
         content: messageText,
         timestamp: Date.now(),
@@ -52,7 +52,7 @@ export function ChatClient() {
       dispatch({ type: 'SET_THINKING', isThinking: true });
 
       // 准备 agent 消息占位
-      const agentMessageId = `agent-${Date.now()}`;
+      const agentMessageId = `agent-${crypto.randomUUID()}`;
       const placeholderMessage: ChatMessage = {
         id: agentMessageId,
         role: 'agent',

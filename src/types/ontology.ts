@@ -1,5 +1,7 @@
 // === Ontology Hub - Core Type Definitions ===
 
+export type { MCPToolResult } from '@/lib/mcp-server/protocol';
+
 /** MCP Transport 接口 — 可插拔传输层 */
 export interface MCPTransport {
   type: 'mock' | 'http' | 'stdio' | 'sse' | 'streamable-http';
@@ -96,14 +98,6 @@ export interface DomainRouteResult {
   confidence: number;
   reasoning: string;
   toolsToCall: string[];
-}
-
-/** MCP 工具调用结果 */
-export interface MCPToolResult {
-  content: string;
-  isError?: boolean;
-  metadata?: Record<string, unknown>;
-  duration?: number;
 }
 
 /** SSE 事件 */

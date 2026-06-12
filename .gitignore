@@ -78,6 +78,14 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
+# Build output logs
+*-output.txt
+build-output.txt
+ts-check-output.txt
+
+# Backup directories
+_backup/
+
 # Temporary files
 *.tmp
 *.temp

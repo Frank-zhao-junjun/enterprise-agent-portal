@@ -7,6 +7,16 @@ import type { DomainOntology, MCPToolParameter } from '@/types/ontology';
 import { getMCPServer } from './mcp-server/registry';
 import type { MCPToolDefinition } from './mcp-server/protocol';
 
+/** 领域 ID 常量 — 集中管理，避免硬编码 */
+export const DOMAIN_IDS = {
+  MANUFACTURING: 'manufacturing',
+  CUSTOMER_SERVICE: 'customer-service',
+  SUPPLY_CHAIN: 'supply-chain',
+  GENERAL: 'general',
+} as const;
+
+export type DomainId = (typeof DOMAIN_IDS)[keyof typeof DOMAIN_IDS];
+
 export const SHARED_CATEGORIES = [
   { id: 'semantic', name: '语义', nameEn: 'Semantic', description: '意图理解、实体识别、语义映射', descriptionEn: 'Intent understanding, entity recognition, semantic mapping' },
   { id: 'behavior', name: '行为', nameEn: 'Behavior', description: '任务规划、执行编排、流程驱动', descriptionEn: 'Task planning, execution orchestration, process driving' },
@@ -30,7 +40,7 @@ interface DomainMeta {
 
 const DOMAIN_METAS: DomainMeta[] = [
   {
-    id: 'manufacturing',
+    id: DOMAIN_IDS.MANUFACTURING,
     name: '制造业',
     nameEn: 'Manufacturing',
     icon: '🏭',
@@ -40,7 +50,7 @@ const DOMAIN_METAS: DomainMeta[] = [
     exampleQuestionsEn: ['Is the L3 production line meeting today\'s target?', 'What quality alerts have occurred recently?', 'What is the maintenance plan for robot R2?', 'Connect to MES to check work order status'],
   },
   {
-    id: 'customer-service',
+    id: DOMAIN_IDS.CUSTOMER_SERVICE,
     name: '客服',
     nameEn: 'Customer Service',
     icon: '🎧',
@@ -50,7 +60,7 @@ const DOMAIN_METAS: DomainMeta[] = [
     exampleQuestionsEn: ['Create a refund ticket for me', 'Which tickets are about to breach SLA?', 'Has customer Zhang Wei\'s complaint been handled?', 'Connect to CRM to check customer info'],
   },
   {
-    id: 'supply-chain',
+    id: DOMAIN_IDS.SUPPLY_CHAIN,
     name: '供应链',
     nameEn: 'Supply Chain',
     icon: '📦',
@@ -60,7 +70,7 @@ const DOMAIN_METAS: DomainMeta[] = [
     exampleQuestionsEn: ['Which materials are running low?', 'How to handle logistics delays?', 'What are the supplier compliance check results?', 'Connect to WMS to check warehouse utilization'],
   },
   {
-    id: 'general',
+    id: DOMAIN_IDS.GENERAL,
     name: '通用',
     nameEn: 'General',
     icon: '💬',

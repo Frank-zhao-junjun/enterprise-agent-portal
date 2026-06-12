@@ -4,8 +4,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getMCPServer } from '@/lib/mcp-server/registry';
-import { JSONRPCRequest } from '@/lib/mcp-server/protocol';
+
+// Zod 校验 JSON-RPC 请求
+const jsonRpcRequestSchema = z.object({
+  jsonrpc: z.literal('2.0'),
+  id: z.union([z.number(), z.string()]).optional(),
+  method: z.string().min(1).max(64),
+  params: z.object({}).passthrough().optional(),
+});
 
 export async function POST(
   request: NextRequest,
@@ -25,14 +33,15 @@ export async function POST(
     );
   }
 
-  // 解析 JSON-RPC 请求
-  let rpcRequest: JSONRPCRequest;
+  // 解析 + Zod 校验 JSON-RPC 请求
+  let rpcRequest: z.infer<typeof jsonRpcRequestSchema>;
   try {
-    rpcRequest = await request.json();
+    const body = await request.json();
+    rpcRequest = jsonRpcRequestSchema.parse(body);
   } catch {
     return NextResponse.json({
       jsonrpc: '2.0',
-      error: { code: -32700, message: 'Parse error: invalid JSON' },
+      error: { code: -32700, message: 'Parse error: invalid JSON-RPC request' },
     });
   }
 

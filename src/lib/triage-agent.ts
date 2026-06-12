@@ -6,7 +6,7 @@
 
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import type { DomainRouteResult, LLMMessage, ReasoningStep, MCPToolResult } from '@/types/ontology';
-import { getDomainById, getAllDomains } from './domain-registry';
+import { getDomainById, getAllDomains, DOMAIN_IDS } from './domain-registry';
 import { createLocalMCPClient, createMockMCPClient } from './mcp-client';
 
 // ============================================================
@@ -14,6 +14,36 @@ import { createLocalMCPClient, createMockMCPClient } from './mcp-client';
 // ============================================================
 
 const DEFAULT_LLM_MODEL = 'doubao-seed-1-8-251228';
+
+/**
+ * 从 LLM 输出中健壮地提取 JSON
+ * 策略: 1) 直接解析 → 2) 提取 ```json 代码块 → 3) 找最外层 { } → 4) null
+ */
+function extractJSONFromLLM<T = unknown>(text: string): T | null {
+  // 1) 直接解析
+  try { return JSON.parse(text.trim()); } catch { /* continue */ }
+
+  // 2) 提取 ```json ... ``` 代码块
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1].trim()); } catch { /* continue */ }
+  }
+
+  // 3) 找最外层 { }
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '{') { if (depth === 0) start = i; depth++; }
+    if (text[i] === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { return JSON.parse(text.slice(start, i + 1)); } catch { /* continue */ }
+      }
+    }
+  }
+
+  return null;
+}
 
 // ============================================================
 // LLM 调用封装 (coze-coding-dev-sdk)
@@ -150,7 +180,7 @@ async function getMCPClientForDomain(domainId: string) {
   const domain = getDomainById(domainId);
 
   // 优先使用本地 MCP Server 直接调用（快，无 HTTP 自引用）
-  if (domain && domainId !== 'general') {
+  if (domain && domainId !== DOMAIN_IDS.GENERAL) {
     try {
       const client = await createLocalMCPClient(domainId);
       return client;
@@ -211,7 +241,7 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
       reasoning: locale === 'zh'
         ? `用户手动选择领域: ${domain?.name ?? forcedDomainId}`
         : `User selected domain: ${domain?.nameEn ?? forcedDomainId}`,
-      toolsToCall: domain?.tools.map((t) => t.name).slice(0, 3) ?? ['ontology_intent_parse'],
+      toolsToCall: domain?.tools.map((t) => t.name) ?? ['ontology_intent_parse'],
     };
   } else {
     try {
@@ -220,11 +250,16 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
 
       let parsed: DomainRouteResult;
       try {
-        const jsonMatch = classifyResult.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch?.[0] ?? '{}') as DomainRouteResult;
+        const extracted = extractJSONFromLLM<DomainRouteResult>(classifyResult);
+        parsed = extracted ?? {
+          domainId: DOMAIN_IDS.GENERAL,
+          confidence: 0.5,
+          reasoning: 'Fallback: could not parse LLM output',
+          toolsToCall: ['ontology_intent_parse'],
+        };
       } catch {
         parsed = {
-          domainId: 'general',
+          domainId: DOMAIN_IDS.GENERAL,
           confidence: 0.5,
           reasoning: 'Fallback: could not parse LLM output',
           toolsToCall: ['ontology_intent_parse'],
@@ -232,14 +267,14 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
       }
 
       if (!getDomainById(parsed.domainId)) {
-        parsed.domainId = 'general';
+        parsed.domainId = DOMAIN_IDS.GENERAL;
         parsed.confidence = 0.3;
       }
       route = parsed;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       route = {
-        domainId: 'general',
+        domainId: DOMAIN_IDS.GENERAL,
         confidence: 0.3,
         reasoning: `LLM error: ${errorMsg}`,
         toolsToCall: ['ontology_intent_parse'],
@@ -272,7 +307,7 @@ export async function runMainAgent(options: RunAgentOptions): Promise<{
   // === Step 3: MCP 工具调用 ===
   const toolResults: Array<{ toolName: string; result: MCPToolResult }> = [];
 
-  if (route.domainId !== 'general') {
+  if (route.domainId !== DOMAIN_IDS.GENERAL) {
     const mcpClient = await getMCPClientForDomain(route.domainId);
 
     // 获取可用工具列表，过滤掉 LLM 幻觉的工具名

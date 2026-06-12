@@ -1,5 +1,6 @@
 // === POST /api/chat — 真正的流式 SSE 聊天 API ===
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { runMainAgent } from '@/lib/triage-agent';
 import type { ReasoningStep } from '@/types/ontology';
 
@@ -12,10 +13,18 @@ interface SSEEvent {
   data: unknown;
 }
 
-// 会话存储（内存级，生产环境应替换为 Redis/DB）
-// 带 TTL 过期防止内存泄漏
+// ── Zod 输入校验 ──────────────────────────────────────────────
+const chatRequestSchema = z.object({
+  message: z.string().min(1).max(4000),
+  sessionId: z.string().max(128).optional(),
+  forcedDomainId: z.string().max(64).optional(),
+  locale: z.enum(['zh', 'en']).optional(),
+});
+
+// ── 会话存储（内存级，生产环境应替换为 Redis/DB）──────────────
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 分钟无活动自动过期
 const SESSION_CLEANUP_INTERVAL = 5 * 60 * 1000; // 每 5 分钟清理
+const MAX_SESSIONS = 500; // 会话数量上限
 
 interface SessionData {
   history: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
@@ -33,6 +42,32 @@ if (typeof globalThis !== 'undefined' && !(globalThis as Record<symbol, unknown>
       if (now - s.lastAccess > SESSION_TTL_MS) sessions.delete(id);
     }
   }, SESSION_CLEANUP_INTERVAL);
+}
+
+// ── 简易 IP 限流 ──────────────────────────────────────────────
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 分钟窗口
+const RATE_LIMIT_MAX_REQUESTS = 20; // 每窗口最多 20 次请求
+const ipRequestCounts = new Map<string, { count: number; windowStart: number }>();
+
+const RATE_LIMIT_CLEANUP_KEY = Symbol.for('hermes-rate-limit-cleanup');
+if (typeof globalThis !== 'undefined' && !(globalThis as Record<symbol, unknown>)[RATE_LIMIT_CLEANUP_KEY]) {
+  (globalThis as Record<symbol, unknown>)[RATE_LIMIT_CLEANUP_KEY] = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of ipRequestCounts) {
+      if (now - data.windowStart > RATE_LIMIT_WINDOW_MS * 2) ipRequestCounts.delete(ip);
+    }
+  }, RATE_LIMIT_WINDOW_MS);
+}
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = ipRequestCounts.get(ip);
+  if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+    ipRequestCounts.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  record.count++;
+  return record.count <= RATE_LIMIT_MAX_REQUESTS;
 }
 
 /**
@@ -73,31 +108,54 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { message, sessionId, forcedDomainId, locale = 'zh' } = body as {
-    message: string;
-    sessionId?: string;
-    forcedDomainId?: string;
-    locale?: string;
-  };
+  // ── 1. IP 限流检查 ──
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-  if (!message || typeof message !== 'string') {
-    return new Response(JSON.stringify({ error: 'message is required' }), {
+  // ── 2. Zod 输入校验 ──
+  let parsed: z.infer<typeof chatRequestSchema>;
+  try {
+    const body = await request.json();
+    parsed = chatRequestSchema.parse(body);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const sid = sessionId || `session-${Date.now()}`;
+  const { message, forcedDomainId, locale = 'zh' } = parsed;
+  const sessionId = parsed.sessionId || `session-${crypto.randomUUID()}`;
+
+  // ── 3. 会话数量上限检查 ──
+  if (!sessions.has(sessionId) && sessions.size >= MAX_SESSIONS) {
+    // 清理最旧的会话腾出空间
+    let oldestKey = '';
+    let oldestTime = Infinity;
+    for (const [id, s] of sessions) {
+      if (s.lastAccess < oldestTime) {
+        oldestTime = s.lastAccess;
+        oldestKey = id;
+      }
+    }
+    if (oldestKey) sessions.delete(oldestKey);
+  }
 
   // 获取或创建会话（带 lastAccess 时间戳）
-  if (!sessions.has(sid)) {
-    sessions.set(sid, { history: [], lastAccess: Date.now() });
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, { history: [], lastAccess: Date.now() });
   }
-  let session = sessions.get(sid)!;
+  const session = sessions.get(sessionId)!;
   session.lastAccess = Date.now();
 
-  // 创建 SSE 流
+  // ── 4. 创建 SSE 流 ──
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -112,16 +170,16 @@ export async function POST(request: NextRequest) {
       try {
         // 运行主 Agent（带超时），每步即时推送
         const result = await withTimeout(
-          withSessionLock(sid, async () => {
-            if (!sessions.has(sid)) {
-              sessions.set(sid, { history: [], lastAccess: Date.now() });
+          withSessionLock(sessionId, async () => {
+            if (!sessions.has(sessionId)) {
+              sessions.set(sessionId, { history: [], lastAccess: Date.now() });
             }
-            const session = sessions.get(sid)!;
+            const session = sessions.get(sessionId)!;
             session.lastAccess = Date.now();
 
             const agentResult = await runMainAgent({
               userMessage: message,
-              sessionId: sid,
+              sessionId,
               forcedDomainId: forcedDomainId || null,
               locale,
               history: session.history,
@@ -140,11 +198,11 @@ export async function POST(request: NextRequest) {
             return agentResult;
           }),
           LLM_TIMEOUT_MS,
-          `LLM processing for session ${sid}`,
+          `LLM processing for session ${sessionId}`,
         );
 
         // 发送完成事件
-        sendEvent({ type: 'done', data: { response: result.response, sessionId: sid, domainId: result.domainId } });
+        sendEvent({ type: 'done', data: { response: result.response, sessionId, domainId: result.domainId } });
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         sendEvent({ type: 'error', data: { error: errorMsg } });
