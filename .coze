@@ -5,9 +5,9 @@ template = "native-static"
 appliedPatches = [ ]
 
 [dev]
-build = [ ]
-run = [ "python", "server.py" ]
+build = [ "pip", "install", "-r", "requirements.txt" ]
+run = [ "python", "main.py" ]
 
 [deploy]
-build = [ ]
-run = [ "python", "server.py" ]
+build = [ "pip", "install", "-r", "requirements.txt" ]
+run = [ "python", "main.py" ]

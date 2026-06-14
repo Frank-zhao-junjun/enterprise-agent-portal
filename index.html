@@ -24,6 +24,9 @@
             <input id="agentSearch" type="search" placeholder="跨全部板块搜索能力 / 场景 / 成效">
           </label>
         </div>
+        <button class="mcp-toolbar-btn" id="mcpPanelBtn" title="MCP Server 管理">
+          <span aria-hidden="true">⚡</span> MCP
+        </button>
       </div>
     </nav>
 
@@ -87,6 +90,92 @@
     <div class="demo-modal-shell">
       <button class="modal-close" id="demoModalClose" type="button" aria-label="关闭">×</button>
       <div class="demo-modal-content" id="demoModalContent"></div>
+    </div>
+  </dialog>
+
+  <!-- MCP Client Panel -->
+  <dialog class="mcp-panel" id="mcpPanel" aria-labelledby="mcpPanelTitle">
+    <div class="mcp-panel-shell">
+      <button class="modal-close" id="mcpPanelClose" type="button" aria-label="关闭">×</button>
+      <div class="mcp-panel-content">
+        <h2 id="mcpPanelTitle">MCP Server 连接管理</h2>
+
+        <!-- Server Configuration Form -->
+        <div class="mcp-section">
+          <h3>添加 MCP Server</h3>
+          <div class="mcp-form">
+            <div class="mcp-form-row">
+              <label>Server 名称</label>
+              <input type="text" id="mcpServerName" placeholder="如: erp-mcp-server" />
+            </div>
+            <div class="mcp-form-row">
+              <label>传输协议</label>
+              <select id="mcpTransport">
+                <option value="sse">SSE</option>
+                <option value="stdio">Stdio</option>
+              </select>
+            </div>
+            <div class="mcp-form-row" id="mcpUrlRow">
+              <label>Server URL</label>
+              <input type="text" id="mcpServerUrl" placeholder="如: http://localhost:8080/sse" />
+            </div>
+            <div class="mcp-form-row" id="mcpCommandRow" style="display:none">
+              <label>命令</label>
+              <input type="text" id="mcpCommand" placeholder="如: npx my-mcp-server" />
+            </div>
+            <div class="mcp-form-row">
+              <label>关联板块</label>
+              <select id="mcpDomain">
+                <option value="*">全部板块</option>
+                <option value="财务">财务</option>
+                <option value="销售与营销">销售与营销</option>
+                <option value="制造与交付">制造与交付</option>
+                <option value="供应链">供应链</option>
+                <option value="采购">采购</option>
+                <option value="人力资源">人力资源</option>
+                <option value="法务合规">法务合规</option>
+                <option value="客服及售后品质">客服及售后品质</option>
+                <option value="主数据和经营分析">主数据和经营分析</option>
+              </select>
+            </div>
+            <button class="mcp-btn mcp-btn-primary" id="mcpConnectBtn">连接 Server</button>
+          </div>
+        </div>
+
+        <!-- Connected Servers -->
+        <div class="mcp-section">
+          <h3>已连接的 Server</h3>
+          <div id="mcpServerList" class="mcp-server-list">
+            <p class="mcp-empty">暂无连接</p>
+          </div>
+        </div>
+
+        <!-- Discovered Tools -->
+        <div class="mcp-section">
+          <h3>可用工具</h3>
+          <div id="mcpToolList" class="mcp-tool-list">
+            <p class="mcp-empty">连接 Server 后自动发现工具</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Agent Chat Dialog -->
+  <dialog class="chat-dialog" id="chatDialog" aria-labelledby="chatDialogTitle">
+    <div class="chat-shell">
+      <button class="modal-close" id="chatClose" type="button" aria-label="关闭">×</button>
+      <div class="chat-content">
+        <div class="chat-header">
+          <h2 id="chatDialogTitle"></h2>
+          <span class="chat-status" id="chatStatus"></span>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="输入消息，与 Agent 对话..." />
+          <button class="mcp-btn mcp-btn-primary" id="chatSendBtn">发送</button>
+        </div>
+      </div>
     </div>
   </dialog>
 

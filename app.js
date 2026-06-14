@@ -1171,3 +1171,192 @@ demoModal.addEventListener("click", (event) => {
 
 renderTabs();
 renderPanel();
+
+/* ===== MCP Client Layer ===== */
+const MCP = {
+  panelOpen: false,
+  servers: [],
+  tools: [],
+
+  async init() {
+    const btn = document.getElementById('mcpBtn');
+    const overlay = document.getElementById('mcpPanelOverlay');
+    const panel = document.getElementById('mcpPanel');
+    const closeBtn = document.getElementById('mcpPanelClose');
+
+    if (btn) btn.addEventListener('click', () => MCP.togglePanel());
+    if (overlay) overlay.addEventListener('click', () => MCP.closePanel());
+    if (closeBtn) closeBtn.addEventListener('click', () => MCP.closePanel());
+
+    const addForm = document.getElementById('mcpAddForm');
+    if (addForm) addForm.addEventListener('submit', (e) => { e.preventDefault(); MCP.addServer(); });
+
+    await MCP.refreshStatus();
+  },
+
+  togglePanel() {
+    this.panelOpen = !this.panelOpen;
+    const overlay = document.getElementById('mcpPanelOverlay');
+    const panel = document.getElementById('mcpPanel');
+    if (overlay) overlay.classList.toggle('open', this.panelOpen);
+    if (panel) panel.classList.toggle('open', this.panelOpen);
+    if (this.panelOpen) this.refreshStatus();
+  },
+
+  closePanel() {
+    this.panelOpen = false;
+    const overlay = document.getElementById('mcpPanelOverlay');
+    const panel = document.getElementById('mcpPanel');
+    if (overlay) overlay.classList.remove('open');
+    if (panel) panel.classList.remove('open');
+  },
+
+  async refreshStatus() {
+    try {
+      const res = await fetch('/api/mcp/status');
+      const data = await res.json();
+      this.servers = data.servers || [];
+      this.tools = data.tools || [];
+      this.renderServers();
+      this.renderTools();
+      this.updateDot();
+    } catch (err) {
+      console.error('MCP status fetch failed:', err);
+    }
+  },
+
+  updateDot() {
+    const dot = document.querySelector('#mcpBtn .dot');
+    if (!dot) return;
+    const connected = this.servers.filter(s => s.status === 'connected').length;
+    const errored = this.servers.filter(s => s.status === 'error').length;
+    dot.className = 'dot' + (errored > 0 ? ' warn' : connected > 0 ? '' : ' off');
+  },
+
+  renderServers() {
+    const container = document.getElementById('mcpServerList');
+    if (!container) return;
+    if (this.servers.length === 0) {
+      container.innerHTML = '<div class="mcp-empty">No MCP servers configured.<br>Add one below to get started.</div>';
+      return;
+    }
+    container.innerHTML = this.servers.map((s, i) => `
+      <div class="mcp-server-card">
+        <div class="server-header">
+          <span class="server-name">${this.esc(s.name)}</span>
+          <span class="server-status ${s.status}">${s.status}</span>
+        </div>
+        <div class="server-url">${this.esc(s.transport)}: ${this.esc(s.url || s.command || '')}</div>
+        <div class="server-tools">${s.tool_count ?? 0} tools available</div>
+        <div class="server-actions">
+          <button class="primary" onclick="MCP.connectServer(${i})">Connect</button>
+          <button onclick="MCP.disconnectServer(${i})">Disconnect</button>
+          <button onclick="MCP.removeServer(${i})">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  renderTools() {
+    const container = document.getElementById('mcpToolList');
+    if (!container) return;
+    if (this.tools.length === 0) {
+      container.innerHTML = '<div class="mcp-empty">No tools discovered yet.<br>Connect a server to discover its tools.</div>';
+      return;
+    }
+    container.innerHTML = this.tools.map(t => `
+      <div class="mcp-tool-item">
+        <div class="tool-name">${this.esc(t.name)}</div>
+        <div class="tool-desc">${this.esc(t.description || 'No description')}</div>
+        <div class="tool-server">Server: ${this.esc(t.server_name || 'unknown')}</div>
+      </div>
+    `).join('');
+  },
+
+  async addServer() {
+    const name = document.getElementById('mcpInputName')?.value?.trim();
+    const transport = document.getElementById('mcpInputTransport')?.value;
+    const url = document.getElementById('mcpInputUrl')?.value?.trim();
+    const command = document.getElementById('mcpInputCommand')?.value?.trim();
+
+    if (!name) return alert('Server name is required');
+    if (transport === 'sse' && !url) return alert('URL is required for SSE transport');
+    if (transport === 'stdio' && !command) return alert('Command is required for stdio transport');
+
+    try {
+      const res = await fetch('/api/mcp/servers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, transport, url, command })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('mcpInputName').value = '';
+        document.getElementById('mcpInputUrl').value = '';
+        document.getElementById('mcpInputCommand').value = '';
+        await this.refreshStatus();
+      } else {
+        alert(data.error || 'Failed to add server');
+      }
+    } catch (err) {
+      alert('Failed to add server: ' + err.message);
+    }
+  },
+
+  async connectServer(index) {
+    const server = this.servers[index];
+    if (!server) return;
+    try {
+      const res = await fetch(`/api/mcp/servers/${encodeURIComponent(server.name)}/connect`, { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) alert(data.error || 'Connection failed');
+      await this.refreshStatus();
+    } catch (err) {
+      alert('Connect failed: ' + err.message);
+    }
+  },
+
+  async disconnectServer(index) {
+    const server = this.servers[index];
+    if (!server) return;
+    try {
+      const res = await fetch(`/api/mcp/servers/${encodeURIComponent(server.name)}/disconnect`, { method: 'POST' });
+      await this.refreshStatus();
+    } catch (err) {
+      console.error('Disconnect failed:', err);
+    }
+  },
+
+  async removeServer(index) {
+    const server = this.servers[index];
+    if (!server) return;
+    if (!confirm(`Remove server "${server.name}"?`)) return;
+    try {
+      const res = await fetch(`/api/mcp/servers/${encodeURIComponent(server.name)}`, { method: 'DELETE' });
+      await this.refreshStatus();
+    } catch (err) {
+      console.error('Remove failed:', err);
+    }
+  },
+
+  async callTool(serverName, toolName, params) {
+    try {
+      const res = await fetch('/api/mcp/tools/call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ server_name: serverName, tool_name: toolName, params: params || {} })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+};
+
+MCP.init();
